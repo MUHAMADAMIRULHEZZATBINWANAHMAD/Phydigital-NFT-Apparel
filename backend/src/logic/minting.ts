@@ -100,6 +100,11 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
   console.log("✅ NFT registered to contract!", lazyMintReceipt.transactionHash);
 
   console.log(`Setting price to ${price} ETH and supply to ${supply}...`);
+  
+  // Set start time to 5 minutes ago to ensure it's immediately active on the blockchain
+  const startTime = new Date();
+  startTime.setMinutes(startTime.getMinutes() - 5);
+
   const conditionTx = setClaimConditions({
     contract,
     phases: [
@@ -107,11 +112,10 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
         maxClaimableSupply: BigInt(supply),
         price: price,
         currencyAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-        startTime: new Date(),
+        startTime: startTime, // <-- THIS IS THE CRITICAL CHANGE
       },
     ],
   });
-
   const conditionReceipt = await sendAndConfirmTransaction({
     transaction: conditionTx,
     account: serverWallet,

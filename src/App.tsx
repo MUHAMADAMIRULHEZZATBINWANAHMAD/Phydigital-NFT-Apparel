@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Mint from "./pages/admin/listing"; // Admin page
 import Catalog from "./pages/customer/catalog"; // Customer catalog page
+import OrderHistory from "./pages/customer/order-history"; 
+import SalesDashboard from "./pages/admin/sales-dashboard";
 
 // A simple temporary Home component
 function Home() {
@@ -38,6 +40,12 @@ function App() {
 
         {/* The customer catalog page (http://localhost:5173/customer/catalog) */}
         <Route path="/customer/catalog" element={<Catalog />} />
+
+        <Route path="/customer/order-history" element={<OrderHistory />} />
+
+        <Route path="/admin/dashboard" element={<SalesDashboard />} />
+
+
       </Routes>
     </BrowserRouter>
   );

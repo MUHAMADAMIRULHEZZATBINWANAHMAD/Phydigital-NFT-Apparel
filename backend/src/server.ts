@@ -51,7 +51,7 @@ app.post("/mint", upload.single("image"), async (req, res) => {
 
 // 2. SHIPPING ENDPOINT (Triggered by frontend after successful purchase)
 app.post("/shipping", async (req, res) => {
-  const { wallet_address, transaction_hash, full_name, shipping_address, phone_number } = req.body;
+  const { wallet_address, transaction_hash, full_name, email, shipping_address, phone_number, item_name, item_image, amount } = req.body;
 
   if (!wallet_address || !transaction_hash || !shipping_address) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
@@ -60,10 +60,14 @@ app.post("/shipping", async (req, res) => {
   try {
     const { data, error } = await supabase.from('shipping_orders').insert([{
         wallet_address,
-        transaction_hash, // Proof of purchase
+        transaction_hash,
         full_name,
+        email,            // Added email
         shipping_address,
         phone_number,
+        item_name,        // Added item name
+        item_image,       // Added item image
+        amount,
         status: 'Pending'
     }]);
 
@@ -85,6 +89,58 @@ app.get("/listings", async (req, res) => {
 
     if (error) throw error;
     res.json({ success: true, listings: data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. ORDER HISTORY ENDPOINT (Fetch purchases for a specific wallet)
+app.get("/orders/:wallet", async (req, res) => {
+  try {
+    const walletAddress = req.params.wallet;
+    
+    const { data, error } = await supabase
+      .from('shipping_orders')
+      .select('*')
+      .eq('wallet_address', walletAddress)
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, orders: data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. GET ALL SHIPPING ORDERS (For Admin Dashboard)
+app.get("/shipping-orders", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('shipping_orders')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, orders: data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. UPDATE SHIPPING ORDER STATUS (For Admin Dashboard)
+app.put("/shipping-orders/:id", async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { status } = req.body; // Expecting 'Completed' or 'Cancelled'
+
+    const { data, error } = await supabase
+      .from('shipping_orders')
+      .update({ status: status })
+      .eq('id', orderId)
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, updatedOrder: data[0] });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

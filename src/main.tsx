@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { ThirdwebProvider } from "thirdweb/react"; // <-- Import Provider
 import App from './App'
 import './index.css'
 
@@ -11,6 +12,9 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    {/* Just the plain provider */}
+    <ThirdwebProvider>
+      <App />
+    </ThirdwebProvider>
   </React.StrictMode>,
 )
