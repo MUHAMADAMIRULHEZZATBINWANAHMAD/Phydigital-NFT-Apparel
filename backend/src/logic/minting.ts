@@ -7,7 +7,8 @@ import {
   sendAndConfirmTransaction,
   Engine,
 } from "thirdweb";
-import { sepolia } from "thirdweb/chains"; // Changed to Ethereum Sepolia
+import { createClient } from "@supabase/supabase-js";
+import { sepolia } from "thirdweb/chains";
 import { lazyMint, setClaimConditions } from "thirdweb/extensions/erc721"; 
 
 // ==========================================
@@ -19,20 +20,23 @@ const pinata = new PinataSDK({
 });
 
 // ==========================================
-// 2. INITIALIZE THIRDWEB
+// 2. INITIALIZE SUPABASE
+// ==========================================
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+// ==========================================
+// 3. INITIALIZE THIRDWEB
 // ==========================================
 const client = createThirdwebClient({
   secretKey: process.env.THIRDWEB_SECRET_KEY!,
 });
 
-// Use the Server Wallet (Engine) instead of Admin Private Key
 const serverWallet = Engine.serverWallet({
   client,
   address: process.env.SERVER_WALLET_ADDRESS!,
   vaultAccessToken: process.env.VAULT_ACCESS_TOKEN!,
 });
 
-// Connect to the contract on Ethereum Sepolia
 const contract = getContract({
   client,
   address: process.env.THIRDWEB_SMART_CONTRACT_ADDRESS!,
@@ -40,22 +44,34 @@ const contract = getContract({
 });
 
 // ==========================================
-// FUNCTION 1: Upload to Pinata IPFS
+// FUNCTION 1: Upload to Supabase Storage + Pinata IPFS
 // ==========================================
 export async function uploadToPinata(filePath: string, shirtName: string, description: string, attributes: any[]) {
-  console.log("Uploading image to Pinata...");
-  const fileData = fs.readFileSync(filePath);
+  console.log("Uploading image to Supabase Storage...");
   
-  const file = new File([fileData], `${shirtName}.png`, { type: "image/png" });
-  const imageUpload = await pinata.upload.public.file(file);
-  const imageUrl = `ipfs://${imageUpload.cid}`;
-  console.log("✅ Image CID:", imageUpload.cid);
+  const fileData = fs.readFileSync(filePath);
+  const fileName = `${Date.now()}-${shirtName}.png`; // Unique filename
+  
+  // Upload to Supabase Storage bucket
+  const { data: storageData, error: storageError } = await supabase.storage
+    .from('listing-image')
+    .upload(fileName, fileData, { contentType: 'image/png' });
 
+  if (storageError) throw new Error(`Supabase Storage upload failed: ${storageError.message}`);
+
+  // Get public URL for the image
+  const { data: { publicUrl } } = supabase.storage
+    .from('listing-image')
+    .getPublicUrl(fileName);
+
+  console.log("✅ Image uploaded to Supabase Storage:", publicUrl);
+
+  // Still upload metadata to Pinata for blockchain permanence
   console.log("Uploading metadata to Pinata...");
   const metadata = {
     name: shirtName,
     description: description,
-    image: imageUrl,
+    image: publicUrl, // Use the Supabase URL (faster than IPFS)
     attributes: attributes
   };
 
@@ -63,7 +79,7 @@ export async function uploadToPinata(filePath: string, shirtName: string, descri
   const metadataUri = `ipfs://${jsonUpload.cid}`;
   console.log("✅ Metadata CID:", jsonUpload.cid);
 
-  return { imageUrl, metadataUri, cid: jsonUpload.cid };
+  return { imageUrl: publicUrl, metadataUri, cid: jsonUpload.cid };
 }
 
 // ==========================================
@@ -72,7 +88,6 @@ export async function uploadToPinata(filePath: string, shirtName: string, descri
 export async function prepareNFTForStore(metadataUri: string, price: string, supply: number) {
   console.log(`Lazy minting NFT to contract from ${metadataUri}...`);
   
-  // 1. Lazy Mint the metadata to the blockchain
   const lazyMintTx = lazyMint({
     contract,
     nfts: [{ uri: metadataUri }],
@@ -80,11 +95,10 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
 
   const lazyMintReceipt = await sendAndConfirmTransaction({
     transaction: lazyMintTx,
-    account: serverWallet, // Executed by Server Wallet
+    account: serverWallet,
   });
   console.log("✅ NFT registered to contract!", lazyMintReceipt.transactionHash);
 
-  // 2. Set Claim Conditions (Price and Supply)
   console.log(`Setting price to ${price} ETH and supply to ${supply}...`);
   const conditionTx = setClaimConditions({
     contract,
@@ -92,7 +106,7 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
       {
         maxClaimableSupply: BigInt(supply),
         price: price,
-        currencyAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // Native token (ETH)
+        currencyAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
         startTime: new Date(),
       },
     ],
@@ -100,7 +114,7 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
 
   const conditionReceipt = await sendAndConfirmTransaction({
     transaction: conditionTx,
-    account: serverWallet, // Executed by Server Wallet
+    account: serverWallet,
   });
   console.log("✅ Claim conditions updated!", conditionReceipt.transactionHash);
 

@@ -21,23 +21,29 @@ app.post("/mint", upload.single("image"), async (req, res) => {
 
     if (!imagePath) return res.status(400).json({ error: "Image required" });
 
-    // 1. Upload to Pinata
-    const { metadataUri } = await uploadToPinata(
+    // 1. Upload to Supabase Storage + Pinata
+    const { imageUrl, metadataUri } = await uploadToPinata(
       imagePath, 
       name, 
       description, 
       attributes ? JSON.parse(attributes) : []
     );
 
-    // 2. Lazy mint to contract (makes it available to buy)
+    // 2. Lazy mint to contract
     const { lazyMintHash } = await prepareNFTForStore(metadataUri, price, parseInt(supply));
 
-    // 3. Save reference to Supabase (optional, but good for your store's UI)
+    // 3. Save listing to Supabase with BOTH image URL and metadata URI
     await supabase.from('store_listings').insert([{
-      name, description, metadata_uri: metadataUri, price, supply: parseInt(supply), transaction_hash: lazyMintHash
+      name, 
+      description, 
+      image_url: imageUrl,  // ← NEW: Fast Supabase image URL
+      metadata_uri: metadataUri,  // ← Still store IPFS metadata for blockchain
+      price, 
+      supply: parseInt(supply), 
+      transaction_hash: lazyMintHash
     }]);
 
-    res.json({ success: true, lazyMintHash, metadataUri });
+    res.json({ success: true, lazyMintHash, metadataUri, imageUrl });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -63,6 +69,22 @@ app.post("/shipping", async (req, res) => {
 
     if (error) throw error;
     res.json({ success: true, message: "Shipping details saved!" });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. CATALOG ENDPOINT (Fetch all shirts for the storefront)
+app.get("/listings", async (req, res) => {
+  try {
+    // Fetch all listings from Supabase, newest first
+    const { data, error } = await supabase
+      .from('store_listings')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, listings: data });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

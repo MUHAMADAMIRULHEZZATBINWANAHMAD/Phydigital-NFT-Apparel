@@ -118,12 +118,12 @@ export default function Mint() {
         </div>
 
         <div>
-          <label>Shirt Image (Uploaded to Pinata IPFS):</label><br />
+          <label>Shirt Image:</label><br />
           <input type="file" name="image" accept="image/*" required />
         </div>
 
         <button type="submit" disabled={loading} style={{ padding: '10px', marginTop: '10px' }}>
-          {loading ? "Processing (Uploading to Pinata & Blockchain)..." : "Create Listing"}
+          {loading ? "Processing (Uploading & Minting)..." : "Create Listing"}
         </button>
       </form>
 
@@ -133,54 +133,47 @@ export default function Mint() {
             <>
               <h2 style={{ color: "green" }}>✅ Listing Created Successfully!</h2>
               
-              <p><strong>Metadata IPFS URI:</strong> <br/>
-                <a href={response.metadataUri.replace("ipfs://", "https://ipfs.io/ipfs/")} target="_blank" rel="noopener noreferrer">
-                  {response.metadataUri}
-                </a>
+              <p><strong>Ipfs CID:</strong> <br/>
+                {response.metadataUri ? response.metadataUri.replace("ipfs://", "") : "Not available"}
               </p>
               
-              <p><strong>Blockchain Tx Hash (Lazy Mint):</strong> <br/>
-                {response.lazyMintHash ? (
-                  <a
-                    href={`https://sepolia.etherscan.io/tx/${response.lazyMintHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {response.lazyMintHash}
-                  </a>
-                ) : "Not available"}
+              <p><strong>Tx Hash:</strong> <br/>
+                {response.lazyMintHash ? response.lazyMintHash : "Not available"}
               </p>
 
-              {/* QR code generation for the Metadata URI */}
-              <div style={{ marginTop: "20px" }}>
-                <p><strong>Scan QR to view Metadata:</strong></p>
-                <div style={{ background: "white", padding: "10px", display: "inline-block" }}>
-                  <QRCodeSVG
-                    value={response.metadataUri.replace("ipfs://", "https://ipfs.io/ipfs/")}
-                    size={180}
-                  />
+              {/* QR code generation for the Blockchain Explorer */}
+              {response.lazyMintHash && (
+                <div style={{ marginTop: "20px" }}>
+                  <p><strong>Scan QR to view transaction on Etherscan:</strong></p>
+                  <div style={{ background: "white", padding: "10px", display: "inline-block" }}>
+                    <QRCodeSVG
+                      value={`https://sepolia.etherscan.io/tx/${response.lazyMintHash}`}
+                      size={180}
+                    />
+                  </div>
+                  
+                  <div style={{ marginTop: "15px" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(response.lazyMintHash);
+                        alert("Tx Hash copied to clipboard!");
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#007bff",
+                        color: "#fff",
+                        cursor: "pointer",
+                        fontWeight: "bold"
+                      }}
+                    >
+                      Copy Tx Hash
+                    </button>
+                  </div>
                 </div>
-                <div style={{ marginTop: "15px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(response.metadataUri.replace("ipfs://", "https://ipfs.io/ipfs/"));
-                      alert("Metadata URL copied to clipboard!");
-                    }}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: "6px",
-                      border: "none",
-                      background: "#007bff",
-                      color: "#fff",
-                      cursor: "pointer",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    Copy Metadata URL
-                  </button>
-                </div>
-              </div>
+              )}
             </>
           ) : (
             <p style={{ color: "red" }}>❌ Error: {response.error}</p>
