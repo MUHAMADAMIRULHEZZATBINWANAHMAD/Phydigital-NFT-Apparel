@@ -29,7 +29,7 @@ export default function Catalog() {
   const { mutate: sendTransaction, isPending: isTxPending } = useSendTransaction();
 
   useEffect(() => {
-    fetch("https://www.phygital.foo/listings")
+    fetch("https://phydigital-nft-apparel.onrender.com/listings")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -88,7 +88,7 @@ export default function Catalog() {
     if (!account || !txHash || !purchasedItem) return;
 
     try {
-      const res = await fetch("https://www.phygital.foo/shipping", {
+      const res = await fetch("https://phydigital-nft-apparel.onrender.com/shipping", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

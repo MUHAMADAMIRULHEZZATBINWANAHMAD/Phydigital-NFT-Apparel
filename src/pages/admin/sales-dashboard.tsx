@@ -13,7 +13,7 @@ function ShippingView() {
 
   const fetchOrders = () => {
     setLoading(true);
-    fetch("https://www.phygital.foo/shipping-orders")
+    fetch("https://phydigital-nft-apparel.onrender.com/shipping-orders")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setOrders(data.orders);
@@ -27,7 +27,7 @@ function ShippingView() {
 
   const handleUpdateStatus = async (orderId: number, newStatus: string) => {
     try {
-      const res = await fetch(`https://www.phygital.foo/shipping-orders/${orderId}`, {
+      const res = await fetch(`https://phydigital-nft-apparel.onrender.com/shipping-orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -189,8 +189,8 @@ function SalesView() {
 
   useEffect(() => {
     Promise.all([
-      fetch("https://www.phygital.foo/listings").then(res => res.json()),
-      fetch("https://www.phygital.foo/shipping-orders").then(res => res.json())
+      fetch("https://phydigital-nft-apparel.onrender.com/listings").then(res => res.json()),
+      fetch("https://phydigital-nft-apparel.onrender.com/shipping-orders").then(res => res.json())
     ]).then(([listingsRes, ordersRes]) => {
       if (listingsRes.success) {
         const listingsMap = listingsRes.listings.reduce((acc: any, item: any) => {
