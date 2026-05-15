@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import express from "express";
 import multer from "multer";
 import cors from "cors";
-import { uploadToPinata, prepareNFTForStore } from "./logic/minting"; 
+import { uploadToPinata, prepareNFTForStore } from "./logic/minting.js"; 
 import { createClient } from "@supabase/supabase-js";
 import 'dotenv/config';
 
