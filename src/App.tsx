@@ -1,54 +1,144 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import Mint from "./pages/admin/listing"; // Admin page
-import Catalog from "./pages/customer/catalog"; // Customer catalog page
+import Mint from "./pages/admin/listing"; 
+import Catalog from "./pages/customer/catalog"; 
 import OrderHistory from "./pages/customer/order-history"; 
 import SalesDashboard from "./pages/admin/sales-dashboard";
 
-// A simple temporary Home component
+// --- IMPORT YOUR MODULAR UI-VERSE BUTTON COMPONENT ---
+import Button from "./assets/components/button"; 
+
+// --- FLUID ADAPTIVE HOME COMPONENT ---
 function Home() {
   return (
-    <div style={{ padding: "50px", textAlign: "center" }}>
-      <h1>Welcome to Sunday Clothing</h1>
-      <p>This is the main hub.</p>
-      
-      <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "20px" }}>
-        <Link to="/customer/catalog">
-          <button style={{ padding: "10px 20px", cursor: "pointer" }}>
-            View Customer Catalog
-          </button>
-        </Link>
+    <div style={homeContainerStyle}>
+      {/* Brand Header */}
+      <nav style={homeNavStyle}>
+        <h2 style={logoStyle}>SUNDAY CLOTHING<span style={{ color: '#f8df00' }}>.</span></h2>
+      </nav>
 
-        <Link to="/admin/listing">
-          <button style={{ padding: "10px 20px", cursor: "pointer" }}>
-            Go to Admin Listing Page
-          </button>
-        </Link>
+      {/* Main Feature Layout */}
+      <div style={homeContentStyle}>
+        <h1 style={heroTitleStyle}>Phygital<br/>Excellence</h1>
+        <p style={heroSubtitleStyle}>
+          Verifiable digital ownership. Premium physical quality. <br/>
+          Experience the future of apparel.
+        </p>
+        
+        <div style={buttonGroupStyle}>
+          <Link to="/customer/catalog" style={linkWrapperStyle}>
+            <Button label="Enter Shop" />
+          </Link>
+
+          <Link to="/admin/listing" style={linkWrapperStyle}>
+            <Button label="Forge Assets" />
+          </Link>
+        </div>
       </div>
+      
+      {/* Ambient Lighting Accent */}
+      <div style={accentCircleStyle} />
     </div>
   );
 }
 
+// --- MAIN APPLICATION ROUTER ---
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* The default home page (http://localhost:5173/) */}
         <Route path="/" element={<Home />} />
-        
-        {/* The admin minting page (http://localhost:5173/admin/listing) */}
         <Route path="/admin/listing" element={<Mint />} />
-
-        {/* The customer catalog page (http://localhost:5173/customer/catalog) */}
         <Route path="/customer/catalog" element={<Catalog />} />
-
         <Route path="/customer/order-history" element={<OrderHistory />} />
-
         <Route path="/admin/dashboard" element={<SalesDashboard />} />
-
-
       </Routes>
     </BrowserRouter>
   );
 }
+
+// ===================================================================
+// FLUID & STABLE BOUTIQUE STYLES (DESKTOP MAX WITH SAFE RESPONSIVENESS)
+// ===================================================================
+
+const homeContainerStyle: React.CSSProperties = {
+  backgroundColor: '#050505',
+  color: '#fff',
+  minHeight: '100vh',      // Safer than absolute height for mobile viewport elements
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  position: 'relative',
+  fontFamily: '"Inter", sans-serif',
+  overflow: 'hidden',       
+  boxSizing: 'border-box',
+};
+
+const homeNavStyle: React.CSSProperties = {
+  minHeight: '110px',
+  padding: '20px 6%',
+  display: 'flex',
+  alignItems: 'center',
+  zIndex: 10,
+  flexShrink: 0,
+};
+
+const logoStyle = { 
+  fontSize: '1.2rem', 
+  fontWeight: '900', 
+  letterSpacing: '2px',
+  margin: 0,
+};
+
+const homeContentStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center', 
+  alignItems: 'flex-start', 
+  padding: '40px 6% 80px 6%',
+  zIndex: 10,
+  textAlign: 'left',
+};
+
+const heroTitleStyle = {
+  /* Fluid Text Scaling: Min size 2.5rem (Mobile), auto-scales with viewport, max size 6.5rem (Desktop) */
+  fontSize: 'clamp(2.5rem, 9vw, 6.5rem)', 
+  fontWeight: '900',
+  lineHeight: '0.9',
+  margin: '0 0 24px 0',
+  letterSpacing: '-2px',
+  textTransform: 'uppercase' as const,
+};
+
+const heroSubtitleStyle = {
+  fontSize: '1.1rem',
+  color: '#666',
+  maxWidth: '500px',
+  lineHeight: '1.6',
+  margin: '0 0 40px 0',
+};
+
+const buttonGroupStyle = {
+  display: 'flex',
+  gap: '20px',
+  flexWrap: 'wrap' as const, // Allows buttons to cleanly stack on phone screens instead of overflowing
+  width: '100%',
+};
+
+const linkWrapperStyle = {
+  display: 'inline-block',
+  textDecoration: 'none'
+};
+
+const accentCircleStyle: React.CSSProperties = {
+  position: 'absolute',
+  width: '60vw',
+  height: '60vw',
+  right: '-10vw',
+  top: '5vh',
+  background: 'radial-gradient(circle, rgba(248, 223, 0, 0.06) 0%, rgba(0,0,0,0) 70%)',
+  zIndex: 1,
+  pointerEvents: 'none',
+};
 
 export default App;

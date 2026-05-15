@@ -16,13 +16,10 @@ function ProductList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch all listings from the backend
     fetch("http://localhost:3001/listings")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setListings(data.listings);
-        }
+        if (data.success) setListings(data.listings);
       })
       .catch((err) => console.error("Failed to fetch listings:", err))
       .finally(() => setLoading(false));
@@ -30,50 +27,27 @@ function ProductList() {
 
   return (
     <div style={{ marginTop: "40px" }}>
-      <h2>All Created Products</h2>
+      <h2 style={sectionHeaderStyle}>Inventory Archive</h2>
       {loading ? (
-        <p>Loading products...</p>
-      ) : listings.length === 0 ? (
-        <p>No products have been created yet.</p>
+        <p style={loaderStyle}>Loading collection...</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100%, 1fr))", gap: "25px" }}>
           {listings.map((item) => (
-            <div 
-              key={item.id} 
-              style={{ 
-                border: "1px solid #ccc", 
-                borderRadius: "8px", 
-                padding: "20px", 
-                display: "flex", 
-                gap: "20px",
-                alignItems: "center"
-              }}
-            >
-              {/* Image */}
-              <img 
-                src={item.image_url} 
-                alt={item.name} 
-                style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "4px" }} 
-              />
-
-              {/* Metadata */}
+            <div key={item.id} style={cardStyle}>
+              <img src={item.image_url} alt={item.name} style={thumbStyle} />
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: "0 0 10px 0", color: "#f8df00" }}>{item.name}</h3>
-                <p><strong>Description:</strong> {item.description}</p>
-                <p><strong>Price:</strong> {item.price} ETH | <strong>Supply:</strong> {item.supply}</p>
-                <p style={{ fontSize: "12px", wordBreak: "break-all" }}>
-                  <strong>Metadata URI:</strong> <a href={`https://gateway.pinata.cloud/ipfs/${item.metadata_uri.replace("ipfs://", "")}`} target="_blank" rel="noreferrer">{item.metadata_uri}</a>
-                </p>
-              </div>
-
-              {/* Blockchain Info */}
-              <div style={{ width: "150px", textAlign: "center", borderLeft: "1px solid #444", paddingLeft: "20px" }}>
-                <div style={{ background: "white", padding: "8px", borderRadius: "4px", display: "inline-block" }}>
-                  <QRCodeSVG value={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} size={100} />
+                <h3 style={itemTitleStyle}>{item.name}</h3>
+                <p style={descriptionStyle}>{item.description}</p>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                   <p style={statStyle}><span style={labelStyle}>Price:</span> {item.price} ETH</p>
+                   <p style={statStyle}><span style={labelStyle}>Supply:</span> {item.supply}</p>
                 </div>
-                <a href={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "12px", display: "block", marginTop: "10px" }}>
-                  View on Etherscan
-                </a>
+              </div>
+              <div style={qrContainerStyle}>
+                <div style={qrWrapperStyle}>
+                  <QRCodeSVG value={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} size={80} bgColor="transparent" fgColor="#fff" />
+                </div>
+                <a href={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} target="_blank" rel="noreferrer" style={goldLinkStyle}>View Tx ↗</a>
               </div>
             </div>
           ))}
@@ -83,7 +57,6 @@ function ProductList() {
   );
 }
 
-
 // ===================================================================
 // 2. VIEW FOR THE CREATION FORM
 // ===================================================================
@@ -92,13 +65,11 @@ function CreateForm() {
   const [response, setResponse] = useState<any>(null);
   const [color, setColor] = useState("");
   const [country, setCountry] = useState("");
-  const [value, setValue] = useState(""); 
+  const [value, setValue] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setResponse(null);
-
     const form = e.currentTarget;
     const formData = new FormData(form);
     const attributes = [{ trait_type: "Color", value: color }, { trait_type: "Country", value: country }, { trait_type: "Value", value: value }];
@@ -108,8 +79,7 @@ function CreateForm() {
       const res = await fetch("http://localhost:3001/mint", { method: "POST", body: formData });
       const data = await res.json();
       setResponse(data);
-      form.reset(); // Clear form on success
-      setColor(""); setCountry(""); setValue("");
+      if(data.success) form.reset();
     } catch (err: any) {
       setResponse({ success: false, error: err.message });
     } finally {
@@ -118,97 +88,136 @@ function CreateForm() {
   }
 
   return (
-    <div style={{ marginTop: "40px" }}>
-      <h2>Create New Shirt Listing</h2>
-      <p>Fill out this form to upload the shirt and lazy-mint it to the store.</p>
-      
-      <form onSubmit={handleSubmit} encType="multipart/form-data" style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '400px' }}>
-        <input name="name" type="text" placeholder="Shirt Name" required style={{ width: '100%', padding: '8px' }} />
-        <textarea name="description" placeholder="Description" required style={{ width: '100%', height: '80px', padding: '8px' }} />
-        <input name="supply" type="number" placeholder="Total Supply" defaultValue="100" required style={{ width: '100%', padding: '8px' }} />
-        <input name="price" type="number" placeholder="Price (in ETH)" step="0.0001" defaultValue="0.007" required style={{ width: '100%', padding: '8px' }} />
-        <input type="text" placeholder="Color" value={color} onChange={(e) => setColor(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
-        <input type="text" placeholder="Manufacturing Country" value={country} onChange={(e) => setCountry(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
-        <input type="text" placeholder="Value (e.g., Premium)" value={value} onChange={(e) => setValue(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
-        <div>
-          <label>Shirt Image:</label><br />
-          <input type="file" name="image" accept="image/*" required />
-        </div>
-        <button type="submit" disabled={loading} style={{ padding: '10px', marginTop: '10px' }}>
-          {loading ? "Processing..." : "Create Listing"}
-        </button>
-      </form>
+    <div style={{ marginTop: "40px", display: 'flex', justifyContent: 'center' }}>
+      <div style={formCardStyle}>
+        <h2 style={sectionHeaderStyle}>Register Physical Asset</h2>
+        <p style={{ color: '#666', marginBottom: '30px' }}>Upload item details to generate a blockchain-verified listing.</p>
+        
+        <form onSubmit={handleSubmit} style={formStyle}>
+          <input name="name" placeholder="Shirt Name" required style={inputStyle} />
+          <textarea name="description" placeholder="Item Narrative / Description" required style={{...inputStyle, height: '100px'}} />
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <input name="supply" type="number" placeholder="Supply" defaultValue="100" style={inputStyle} />
+            <input name="price" type="number" step="0.0001" placeholder="Price (ETH)" style={inputStyle} />
+          </div>
+          <input placeholder="Color" value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle} />
+          <input placeholder="Manufacturing Origin" value={country} onChange={(e) => setCountry(e.target.value)} style={inputStyle} />
+          <input placeholder="Rarity Value (e.g. Premium)" value={value} onChange={(e) => setValue(e.target.value)} style={inputStyle} />
+          
+          <div style={fileInputContainer}>
+             <label style={labelStyle}>Product Image</label>
+             <input type="file" name="image" accept="image/*" required style={{ color: '#888' }} />
+          </div>
 
-      {response && (
-        <div style={{ marginTop: "30px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
-          {response.success ? (
-            <>
-              <h2 style={{ color: "green" }}>✅ Listing Created!</h2>
-              <p><strong>Tx Hash:</strong> {truncate(response.lazyMintHash, 10, 10)}</p>
-            </>
-          ) : (
-            <p style={{ color: "red" }}>❌ Error: {response.error}</p>
-          )}
-        </div>
-      )}
+          <button type="submit" disabled={loading} style={primaryButtonStyle}>
+            {loading ? "AUTHENTICATING..." : "CREATE LISTING"}
+          </button>
+        </form>
+
+        {response && (
+          <div style={{ marginTop: "20px", color: response.success ? "#2ecc71" : "#e74c3c" }}>
+            {response.success ? "✓ Asset successfully lazy-minted." : `Error: ${response.error}`}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-
 // ===================================================================
-// 3. MAIN ADMIN PAGE COMPONENT
+// 3. MAIN ADMIN PAGE
 // ===================================================================
 export default function Listing() {
-  const [view, setView] = useState('create'); // 'create' or 'product'
+  const [view, setView] = useState('create');
   const navigate = useNavigate();
 
-  const activeButtonStyle = {
-    padding: '10px 20px',
-    cursor: 'pointer',
-    border: '1px solid #f8df00',
-    backgroundColor: '#f8df00',
-    color: '#000',
-    fontWeight: 'bold',
-  };
-
-  const inactiveButtonStyle = {
-    padding: '10px 20px',
-    cursor: 'pointer',
-    border: '1px solid #ccc',
-    backgroundColor: 'transparent',
-    color: '#fff',
-  };
-
   return (
-    <div style={{ padding: "40px", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1>Product Management</h1>
-        <div>
-          <button type="button" onClick={() => navigate("/admin/dashboard")} style={inactiveButtonStyle}>
-              Go to Dashboard ↗
-          </button>
+    <div style={containerStyle}>
+      <nav style={navStyle}>
+        <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        <button onClick={() => navigate("/admin/dashboard")} style={secondaryButtonStyle}>
+           SALES ↗
+        </button>
+      </nav>
+
+      <div style={tabHeaderStyle}>
+        <h1 style={heroTitleStyle}>Product Management</h1>
+        <div style={tabContainerStyle}>
+           <button onClick={() => setView('create')} style={view === 'create' ? activeTabStyle : inactiveTabStyle}>CREATE</button>
+           <button onClick={() => setView('product')} style={view === 'product' ? activeTabStyle : inactiveTabStyle}>PRODUCTS</button>
         </div>
       </div>
 
-      {/* View Switcher Buttons */}
-      <div style={{ textAlign: 'center', margin: '20px 0' }}>
-        <button 
-          onClick={() => setView('create')} 
-          style={view === 'create' ? activeButtonStyle : inactiveButtonStyle}
-        >
-          Create
-        </button>
-        <button 
-          onClick={() => setView('product')} 
-          style={view === 'product' ? activeButtonStyle : inactiveButtonStyle}
-        >
-          Products
-        </button>
-      </div>
-
-      {/* Conditional Rendering based on view */}
       {view === 'create' ? <CreateForm /> : <ProductList />}
     </div>
   );
 }
+
+// ===================================================================
+// SHARED PREMIUM STYLES
+// ===================================================================
+const containerStyle: React.CSSProperties = {
+  backgroundColor: '#050505', color: '#fff', minHeight: '100vh', padding: '0 6% 100px 6%', fontFamily: '"Inter", sans-serif',
+};
+
+const navStyle: React.CSSProperties = {
+  height: '100px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1a1a1a', marginBottom: '40px',
+};
+
+const logoStyle = { fontSize: '1.5rem', fontWeight: '900', letterSpacing: '-1px' };
+
+const tabHeaderStyle: React.CSSProperties = {
+  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px'
+};
+
+const heroTitleStyle = { fontSize: '3.5rem', fontWeight: '900', margin: '0', letterSpacing: '-2px' };
+
+const tabContainerStyle = { backgroundColor: '#0c0c0c', padding: '6px', borderRadius: '14px', border: '1px solid #1a1a1a' };
+
+const activeTabStyle = { padding: '10px 25px', backgroundColor: '#f8df00', color: '#000', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' };
+
+const inactiveTabStyle = { padding: '10px 25px', backgroundColor: 'transparent', color: '#666', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' };
+
+const cardStyle: React.CSSProperties = {
+  backgroundColor: '#0c0c0c', borderRadius: '24px', padding: '25px', border: '1px solid #1a1a1a', display: 'flex', gap: '25px', alignItems: 'center'
+};
+
+const thumbStyle = { width: "120px", height: "120px", objectFit: "cover" as const, borderRadius: "12px" };
+
+const itemTitleStyle = { fontSize: '1.4rem', fontWeight: '700', color: '#f8df00', margin: '0 0 5px 0' };
+
+const descriptionStyle = { color: '#888', fontSize: '0.9rem', margin: '0' };
+
+const labelStyle = { fontSize: '0.65rem', color: '#444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' };
+
+const statStyle = { margin: '0', fontSize: '0.9rem', color: '#fff' };
+
+const qrContainerStyle: React.CSSProperties = { textAlign: 'center', paddingLeft: '25px', borderLeft: '1px solid #1a1a1a' };
+
+const qrWrapperStyle = { padding: '8px', backgroundColor: '#151515', borderRadius: '10px', border: '1px solid #222' };
+
+const goldLinkStyle = { color: '#f8df00', textDecoration: 'none', fontSize: '0.8rem', fontWeight: '600', marginTop: '8px', display: 'block' };
+
+const formCardStyle: React.CSSProperties = {
+  backgroundColor: '#0c0c0c', padding: '50px', borderRadius: '30px', border: '1px solid #1a1a1a', width: '100%', maxWidth: '600px'
+};
+
+const formStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '15px' };
+
+const inputStyle = {
+  backgroundColor: '#111', border: '1px solid #222', color: '#fff', padding: '14px', borderRadius: '12px', outline: 'none', fontSize: '0.9rem'
+};
+
+const primaryButtonStyle = {
+  padding: '16px', backgroundColor: '#fff', color: '#000', borderRadius: '14px', fontWeight: '900', border: 'none', cursor: 'pointer', marginTop: '10px'
+};
+
+const secondaryButtonStyle = {
+  padding: '10px 20px', backgroundColor: 'transparent', color: '#888', borderRadius: '10px', border: '1px solid #222', cursor: 'pointer', fontWeight: '600'
+};
+
+const sectionHeaderStyle = { fontSize: '1.8rem', fontWeight: '800', margin: '0 0 10px 0' };
+
+const fileInputContainer = { backgroundColor: '#151515', padding: '15px', borderRadius: '12px', border: '1px dashed #333' };
+
+const loaderStyle = { textAlign: 'center' as const, padding: '100px', color: '#444', letterSpacing: '2px', fontWeight: '800' };

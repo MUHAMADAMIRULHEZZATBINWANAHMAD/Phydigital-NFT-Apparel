@@ -1,42 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import MyConnectButton from "../../assets/components/connectbutton";
-
-// --- NEW IMPORTS FOR PURCHASING ---
-import { TransactionButton, useActiveAccount } from "thirdweb/react";
+import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { claimTo } from "thirdweb/extensions/erc721";
-import { getContract, createThirdwebClient } from "thirdweb";
+import { getContract, createThirdwebClient, prepareContractCall } from "thirdweb";
 import { sepolia } from "thirdweb/chains";
-import { Link } from "react-router-dom";
 
 const client = createThirdwebClient({
-  clientId: "2b0023810373344471b9343f003fbba8", 
+  clientId: "2b0023810373344471b9343f003fbba8",
 });
-
-const contract = getContract({
-  client,
-  address: "0xe2E14c2351f3C19D1aaE477525c4D38B7FD325b0", // Your contract address
-  chain: sepolia,
-});
-
-
-
-function truncate(str: string, start: number, end: number) {
-  if (!str || str.length <= start + end) return str;
-  return `${str.substring(0, start)}...${str.substring(str.length - end)}`;
-}
 
 export default function Catalog() {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // --- NEW STATE FOR SHIPPING MODAL ---
-  const account = useActiveAccount(); // Get connected user's wallet
-  const [showShippingModal, setShowShippingModal] = useState(false);
-  const [purchaseTxHash, setPurchaseTxHash] = useState("");
+  const [selectedTx, setSelectedTx] = useState<string | null>(null);
+  const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
-  const [purchasedItem, setPurchasedItem] = useState<any>(null); // <-- NEW
-
+  const account = useActiveAccount();
+  const { mutate: sendTransaction, isPending: isTxPending } = useSendTransaction();
 
   useEffect(() => {
     fetch("http://localhost:3001/listings")
@@ -46,178 +29,308 @@ export default function Catalog() {
           setListings(data.listings);
         }
       })
-      .catch((err) => console.error("Failed to fetch listings:", err))
+      .catch((err) => console.error("Catalog asset fetch error:", err))
       .finally(() => setLoading(false));
   }, []);
 
-  // Submit shipping data to backend
-  async function handleShippingSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    const payload = {
-      wallet_address: account?.address,
-      transaction_hash: purchaseTxHash,
-      full_name: formData.get("fullName"),
-      email: formData.get("email"),
-      shipping_address: formData.get("address"),
-      phone_number: formData.get("phone"),
-      item_name: purchasedItem?.name,
-      item_image: purchasedItem?.image_url,
-      amount: purchasedItem?.price,
-    };
+  const handleBuyNow = async (item: any) => {
+    if (!account) {
+      alert("Please connect your wallet first");
+      return;
+    }
 
     try {
-      const res = await fetch("http://localhost:3001/shipping", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      setBuyingItemId(item.id);
+      setTxHash(null);
+
+      const contract = getContract({
+        client,
+        address: process.env.REACT_APP_CONTRACT_ADDRESS || "0xe2E14c2351f3C19D1aaE477525c4D38B7FD325b0",
+        chain: sepolia,
       });
-      const data = await res.json();
-      if (data.success) {
-        alert("Purchase and shipping details saved successfully!");
-        setShowShippingModal(false);
-      } else {
-        alert("Error saving shipping data: " + data.error);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to connect to backend.");
+
+      // Prepare the claim transaction
+      const tx = prepareContractCall({
+        contract,
+        method: "function claim(address to, uint256 tokenId, uint256 quantity, address currencyAddress, uint256 pricePerToken, (bytes32[] proof, uint256 quantityLimitPerWallet, uint256 pricePerToken, address currency, uint256 startTime, uint256 endTime, bytes32 merkleRoot, uint128 maxClaimableSupply, uint256 supplyClaimed, uint256 quantityClaimed) data, bytes signature)",
+        params: [
+          account.address,
+          BigInt(item.token_id || 0),
+          BigInt(1),
+          "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+          BigInt(item.price_wei || 0),
+        ],
+      });
+
+      sendTransaction(tx as any, {
+        onSuccess: (receipt: any) => {
+          setTxHash(receipt);
+          console.log("✅ NFT claimed! Tx:", receipt);
+          setBuyingItemId(null);
+        },
+        onError: (error: any) => {
+          console.error("❌ Claim failed:", error);
+          setBuyingItemId(null);
+        },
+      });
+    } catch (error) {
+      console.error("Error initiating purchase:", error);
+      setBuyingItemId(null);
     }
-  }
+  };
 
   return (
-    <div style={{ padding: "40px", maxWidth: "1200px", margin: "0 auto", position: "relative" }}>
+    <div style={containerStyle}>
+      {/* --- RESPONSIVE BRAND NAVIGATION --- */}
+      <nav style={navStyle}>
+        <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        <div style={navRightSideStyle}>
+          <Link to="/customer/order-history" style={linkStyle}>Order History</Link>
+          <MyConnectButton />
+        </div>
+      </nav>
 
+      {/* --- HERO SECTION --- */}
+      <header style={{ marginBottom: '60px' }}>
+        <h1 style={heroTitleStyle}>Latest Drops</h1>
+      </header>
 
-      <div style={{ position: "absolute", top: "40px", right: "20px", display: "flex", alignItems: "center", gap: "15px" }}>
-        <Link to="/customer/order-history" style={{ color: "#fff", textDecoration: "none" }}>
-           Order History
-        </Link>
-        <MyConnectButton />
-      </div>
-            
-      <div style={{ position: "absolute", top: "40px", right: "20px", }}>
-        <MyConnectButton />
-      </div>
-
-      <div style={{ textAlign: "left", marginBottom: "40px", fontSize: "35px", color: "#fff" }}>
-        <h1>Latest Drops</h1>
-      </div>
-      <div style={{ textAlign: "left", marginBottom: "20px", fontSize: "15px", color: "#aaa" }}>
-        <p>Browse our exclusive phygital collection.</p>
-      </div>  
-
+      {/* --- ASSET GRID --- */}
       {loading ? (
-        <p>Loading catalog...</p>
+        <div style={loaderStyle}>Synchronizing item drop matrix...</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginTop: "20px" }}>
-          {listings.length === 0 ? (
-            <p style={{ gridColumn: "span 3" }}>No shirts available right now.</p>
-          ) : (
-            listings.map((item) => (
-              <div 
-                key={item.id} 
-                style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "15px", display: "flex", flexDirection: "column" }}
-              >
-                <div style={{ width: "100%", height: "250px", marginBottom: "15px" }}>
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "4px" }} />
-                  ) : (
-                    <div style={{ width: "100%", height: "100%", backgroundColor: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px" }}>
-                      No Image Provided
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "15px", flexGrow: 1 }}>
-                  <div style={{ flex: 1, fontSize: "13px", textAlign: "left" }}>
-                    <h3 style={{ margin: "0 0 10px 0", fontSize: "20px", color: "#f8df00", fontWeight: "bold" }}>{item.name}</h3>
-                    <p style={{ margin: "0 0 10px 0", color: "#fff", fontWeight: "normal" }}>{item.description}</p>
-                    <h4 style={{ margin: "0 0 10px 0", color: "#fff", fontWeight: "normal" }}> Price: {item.price} Eth</h4>
-                    <p style={{ fontSize: "11px", color: "#fff", marginTop: "0 0 10px 0", fontWeight: "normal", wordBreak: "break-all" }}>
-                      <strong>IPFS CID: </strong>
-                      {item.metadata_uri ? truncate(item.metadata_uri.replace("ipfs://", ""), 6, 6) : "N/A"}
-                    </p>
-                  </div>
-
-                  <div style={{ width: "120px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: "10px" }}>
-                    {item.transaction_hash ? (
-                      <>
-                        <div style={{ background: "white", padding: "8px", border: "1px solid #eee", borderRadius: "4px" }}>
-                          <QRCodeSVG value={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} size={100} />
-                        </div>
-                        <a href={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "12px", textAlign: "center", color: "#007bff", textDecoration: "underline" }}>
-                          View Explorer
-                        </a>
-                      </>
-                    ) : (
-                      <span style={{ fontSize: "11px", color: "#aaa" }}>No Tx Hash</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* --- THIRDWEB SMART TRANSACTION BUTTON --- */}
-                {!account ? (
-                  <p style={{ textAlign: "center", color: "red", fontSize: "12px" }}>Connect wallet to purchase</p>
-                ) : (
-                  <TransactionButton
-                    transaction={() =>
-                      claimTo({
-                        contract: contract,
-                        to: account.address, // Send to the connected user
-                        quantity: 1n, // Buy 1 shirt
-                        
-                      })
-                    }
-                    onTransactionConfirmed={(receipt) => {
-                      // WHEN SUCCESSFUL: Open the shipping form
-                      setPurchaseTxHash(receipt.transactionHash);
-                      setPurchasedItem(item);
-                      setShowShippingModal(true);
-                    }}
-                    onError={(error) => {
-                      alert("Transaction failed! Make sure you have Sepolia ETH.");
-                      console.error("Tx Error", error);
-                    }}
-                    style={{
-                      width: "100%", padding: "12px", backgroundColor: "black", color: "white",
-                      border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", marginTop: "auto"
-                    }}
-                  >
-                    Purchase NFT
-                  </TransactionButton>
-                )}
+        <div style={gridStyle}>
+          {listings.map((item) => (
+            <div key={item.id} style={cardStyle}>
+              {/* Asset Media Frame */}
+              <div style={imageContainerStyle}>
+                <img src={item.image_url} alt={item.name} style={productImageStyle} />
+                <div style={badgeStyle}>Verified Phygital</div>
               </div>
-            ))
-          )}
+
+              {/* Asset Meta Box */}
+              <div style={metaContainerStyle}>
+                <div style={titlePriceRowStyle}>
+                  <h3 style={itemTitleStyle}>{item.name}</h3>
+                  <span style={priceTagStyle}>{item.price} ETH</span>
+                </div>
+                <p style={descriptionStyle}>{item.description}</p>
+                
+                <div style={dividerStyle} />
+
+                {/* --- PROVENANCE & BUY SECTION --- */}
+                <div style={provenanceSectionStyle}>
+                  <div 
+                    style={qrWrapperStyle} 
+                    onClick={() => setSelectedTx(item.transaction_hash)}
+                    title="Inspect Provenance Details"
+                  >
+                    <QRCodeSVG 
+                      value={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} 
+                      size={50} 
+                      bgColor="transparent" 
+                      fgColor="#fff" 
+                    />
+                  </div>
+                  <div>
+                    <span style={provenanceLabelStyle}>ASSET PROVENANCE</span>
+                    <button 
+                      onClick={() => setSelectedTx(item.transaction_hash)} 
+                      style={popupTriggerStyle}
+                    >
+                      Inspect Item Ledger 🔍
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => handleBuyNow(item)}
+                    style={{
+                      ...buyButtonStyle,
+                      opacity: buyingItemId === item.id && isTxPending ? 0.7 : 1,
+                      cursor: buyingItemId === item.id && isTxPending ? 'not-allowed' : 'pointer',
+                    }}
+                    disabled={buyingItemId === item.id && isTxPending}
+                  >
+                    {buyingItemId === item.id && isTxPending ? 'Processing...' : 'Buy Now'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* --- SHIPPING MODAL --- */}
-      {showShippingModal && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-          backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999
-        }}>
-          <div style={{ background: "#222", padding: "30px", borderRadius: "8px", width: "400px" }}>
-            <h2 style={{ marginTop: 0 }}>🎉 Payment Successful!</h2>
-            <p>Please enter your shipping details for the physical shirt.</p>
+      {/* --- REFACTORED QR POPUP MODAL --- */}
+      {selectedTx && (
+        <div style={modalOverlayStyle} onClick={() => setSelectedTx(null)}>
+          <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: '#f8df00', fontSize: '1.2rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                Provenance Token
+              </h3>
+              <button style={closeBtnStyle} onClick={() => setSelectedTx(null)}>✕</button>
+            </div>
             
-            <form onSubmit={handleShippingSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-              <input name="fullName" placeholder="Full Name" required style={{ padding: "10px" }} />
-              <input name="email" type="email" placeholder="Email Address" required style={{ padding: "10px" }} />
-              <textarea name="address" placeholder="Full Shipping Address" required style={{ padding: "10px", height: "80px" }} />
-              <input name="phone" placeholder="Phone Number" required style={{ padding: "10px" }} />
+            <div style={dividerStyle} />
+            
+            <div style={modalQrContainerStyle}>
+              <div style={modalQrWrapperStyle}>
+                <QRCodeSVG 
+                  value={`https://sepolia.etherscan.io/tx/${selectedTx}`} 
+                  size={180}
+                  bgColor="transparent" 
+                  fgColor="#fff" 
+                />
+              </div>
               
-              <button type="submit" style={{ padding: "12px", background: "white", color: "black", fontWeight: "bold", border: "none", cursor: "pointer" }}>
-                Submit Shipping Details
-              </button>
-            </form>
+              <a 
+                href={`https://sepolia.etherscan.io/tx/${selectedTx}`} 
+                target="_blank" 
+                rel="noreferrer" 
+                style={modalExplorerLinkStyle}
+              >
+                View Etherscan Core Explorer ↗
+              </a>
+            </div>
+
+            <div style={dividerStyle} />
+            
+            <div style={{ marginTop: '15px', textAlign: 'center' }}>
+              <span style={provenanceLabelStyle}>TRANSACTION HASH RECORD</span>
+              <p style={{ color: '#555', margin: '4px 0 0 0', fontSize: '0.8rem', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                {selectedTx}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
+      {/* --- TRANSACTION SUCCESS MODAL --- */}
+      {txHash && (
+        <div style={modalOverlayStyle} onClick={() => setTxHash(null)}>
+          <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: '#00d084', fontSize: '1.2rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                ✅ Purchase Complete
+              </h3>
+              <button style={closeBtnStyle} onClick={() => setTxHash(null)}>✕</button>
+            </div>
+            
+            <div style={dividerStyle} />
+            
+            <div style={{ padding: '20px 0', textAlign: 'center' }}>
+              <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '15px' }}>
+                Your NFT has been successfully claimed!
+              </p>
+              <a 
+                href={`https://sepolia.etherscan.io/tx/${txHash}`} 
+                target="_blank" 
+                rel="noreferrer" 
+                style={modalExplorerLinkStyle}
+              >
+                View Transaction on Etherscan ↗
+              </a>
+            </div>
+
+            <div style={dividerStyle} />
+            
+            <div style={{ marginTop: '15px', textAlign: 'center' }}>
+              <button 
+                onClick={() => setTxHash(null)}
+                style={{ ...buyButtonStyle, width: '100%' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// ===================================================================
+// STYLES MATRIX
+// ===================================================================
+
+const containerStyle: React.CSSProperties = {
+  backgroundColor: '#050505', color: '#fff', minHeight: '100vh', padding: '0 6% 120px 6%', fontFamily: '"Inter", sans-serif', boxSizing: 'border-box',
+};
+
+const navStyle: React.CSSProperties = {
+  minHeight: '110px', padding: '20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '60px', width: '100%',
+};
+
+const logoStyle = { fontSize: '1.4rem', fontWeight: '900', letterSpacing: '-1px', margin: 0 };
+const navRightSideStyle = { display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' as const };
+const linkStyle = { color: '#888', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' };
+const heroTitleStyle = { fontSize: 'clamp(3rem, 10vw, 5.5rem)', fontWeight: '900', margin: '0', letterSpacing: '-3px' };
+
+const gridStyle: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '40px', width: '100%',
+};
+
+const cardStyle: React.CSSProperties = {
+  backgroundColor: '#0c0c0c', borderRadius: '28px', border: '1px solid #1a1a1a', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+};
+
+const imageContainerStyle: React.CSSProperties = { position: 'relative', width: '100%', height: '340px', backgroundColor: '#111' };
+const productImageStyle: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'cover' };
+const badgeStyle: React.CSSProperties = { position: 'absolute', top: '20px', left: '20px', backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(12px)', color: '#fff', padding: '6px 14px', borderRadius: '100px', fontSize: '0.7rem', fontWeight: '700', border: '1px solid rgba(255,255,255,0.1)' };
+
+const metaContainerStyle: React.CSSProperties = { padding: '24px', display: 'flex', flexDirection: 'column', flex: 1 };
+const titlePriceRowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' };
+const itemTitleStyle = { fontSize: '1.4rem', fontWeight: '800', margin: '0', color: '#fff' };
+const priceTagStyle = { fontSize: '1.1rem', fontWeight: '800', color: '#f8df00' };
+const descriptionStyle = { color: '#666', fontSize: '0.9rem', margin: '0 0 20px 0', lineHeight: '1.5' };
+const dividerStyle = { height: '1px', backgroundColor: '#1a1a1a', marginBottom: '20px' };
+
+const provenanceSectionStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', backgroundColor: '#111', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.02)'
+};
+
+const qrWrapperStyle = {
+  padding: '6px', backgroundColor: '#151515', borderRadius: '10px', border: '1px solid #222', display: 'inline-flex', cursor: 'pointer'
+};
+
+const provenanceLabelStyle = { display: 'block', fontSize: '0.6rem', color: '#444', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' as const };
+const popupTriggerStyle = { background: 'none', border: 'none', color: '#f8df00', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', padding: 0, display: 'block', marginTop: '3px', textAlign: 'left' as const };
+
+const buyButtonStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #f8df00 0%, #ffd700 100%)',
+  border: 'none',
+  color: '#000',
+  fontSize: '0.85rem',
+  fontWeight: '800',
+  cursor: 'pointer',
+  padding: '8px 16px',
+  borderRadius: '8px',
+  marginLeft: 'auto',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  transition: 'all 0.2s',
+};
+
+const loaderStyle = { textAlign: 'center' as const, padding: '120px 0', color: '#444', letterSpacing: '2px', fontWeight: '800' };
+
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
+};
+
+const modalContentStyle: React.CSSProperties = {
+  backgroundColor: '#0c0c0c', border: '1px solid #222', padding: '35px', borderRadius: '28px', width: '90%', maxWidth: '440px', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+};
+
+const closeBtnStyle = { background: 'none', border: 'none', color: '#555', fontSize: '1.1rem', cursor: 'pointer', transition: 'color 0.2s' };
+
+const modalQrContainerStyle = {
+  display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '30px 0 25px 0',
+};
+
+const modalQrWrapperStyle = {
+  padding: '14px', backgroundColor: '#151515', borderRadius: '18px', border: '1px solid #222', marginBottom: '20px', display: 'inline-flex',
+};
+
+const modalExplorerLinkStyle = {
+  color: '#00a6ff',
+  textDecoration: 'none', fontSize: '0.9rem', fontWeight: '700', letterSpacing: '0.5px', transition: 'opacity 0.2s',
+};
