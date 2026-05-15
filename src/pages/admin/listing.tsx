@@ -16,7 +16,7 @@ function ProductList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:3001/listings")
+    fetch("https://www.phygital.foo/listings")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setListings(data.listings);
@@ -76,7 +76,7 @@ function CreateForm() {
     formData.append("attributes", JSON.stringify(attributes));
 
     try {
-      const res = await fetch("http://localhost:3001/mint", { method: "POST", body: formData });
+      const res = await fetch("https://www.phygital.foo/mint", { method: "POST", body: formData });
       const data = await res.json();
       setResponse(data);
       if(data.success) form.reset();

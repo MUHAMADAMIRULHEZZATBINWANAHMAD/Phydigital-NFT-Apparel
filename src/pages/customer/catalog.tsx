@@ -29,7 +29,7 @@ export default function Catalog() {
   const { mutate: sendTransaction, isPending: isTxPending } = useSendTransaction();
 
   useEffect(() => {
-    fetch("http://localhost:3001/listings")
+    fetch("https://www.phygital.foo/listings")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -88,7 +88,7 @@ export default function Catalog() {
     if (!account || !txHash || !purchasedItem) return;
 
     try {
-      const res = await fetch("http://localhost:3001/shipping", {
+      const res = await fetch("https://www.phygital.foo/shipping", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

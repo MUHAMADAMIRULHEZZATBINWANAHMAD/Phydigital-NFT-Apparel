@@ -15,7 +15,7 @@ export default function OrderHistory() {
   useEffect(() => {
     if (account?.address) {
       setLoading(true);
-      fetch(`http://localhost:3001/shipping-orders?wallet_address=${account.address}`)
+      fetch(`https://www.phygital.foo/shipping-orders?wallet_address=${account.address}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success) setOrders(data.orders);
