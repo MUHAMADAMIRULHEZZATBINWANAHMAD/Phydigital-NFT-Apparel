@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useNavigate } from "react-router-dom";
 import Mint from "./pages/admin/listing"; 
 import Catalog from "./pages/customer/catalog"; 
 import OrderHistory from "./pages/customer/order-history"; 
@@ -9,6 +9,19 @@ import Button from "./assets/components/button";
 
 // --- FLUID ADAPTIVE HOME COMPONENT ---
 function Home() {
+  const navigate = useNavigate();
+
+  const handleAdminAccess = () => {
+    const pin = window.prompt("Please note: admin panel works best on desktop. Enter Admin PIN:");
+    
+   
+    if (pin === "0101") {
+      navigate("/admin/listing");
+    } else if (pin !== null) { // If they didn't press cancel
+      alert("Access Denied: Incorrect PIN.");
+    }
+  };
+
   return (
     <div style={homeContainerStyle}>
       {/* Brand Header */}
@@ -29,9 +42,10 @@ function Home() {
             <Button label="Enter Shop" />
           </Link>
 
-          <Link to="/admin/listing" style={linkWrapperStyle}>
-            <Button label="Forge Assets" />
-          </Link>
+          {/* Replaced <Link> with an onClick handler */}
+          <div style={linkWrapperStyle}>
+            <Button label="Forge Assets" onClick={handleAdminAccess} />
+          </div>
         </div>
       </div>
       

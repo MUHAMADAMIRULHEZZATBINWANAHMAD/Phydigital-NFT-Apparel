@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
 
 // ===================================================================
 // 1. SHIPPING MANAGEMENT VIEW (WITH CONFIRMATION & DISABLE LOGIC)
@@ -9,8 +8,8 @@ function ShippingView() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // State to track which order ID is waiting for complete action confirmation
-  const [pendingConfirmationId, setPendingConfirmationId] = useState<number | null>(null);
+  // Unified state to track both Complete and Cancel actions
+  const [pendingAction, setPendingAction] = useState<{ id: number, status: string } | null>(null);
 
   const fetchOrders = () => {
     setLoading(true);
@@ -39,7 +38,7 @@ function ShippingView() {
       alert("Failed to connect to backend.");
     } finally {
       // Always dismiss overlay target window after action completes
-      setPendingConfirmationId(null);
+      setPendingAction(null);
     }
   };
 
@@ -55,31 +54,60 @@ function ShippingView() {
           return (
             <div key={order.id} style={cardStyle}> 
               <img src={order.item_image} style={thumbStyle} alt={order.item_name} />
-              <div style={{ flex: 1 }}>
-                <span style={labelStyle}>Recipient</span>
-                <p style={{ margin: '2px 0 10px 0', fontWeight: '600', color: '#fff' }}>
-                  {order.full_name} ({order.email})
-                </p>
-                <span style={labelStyle}>Shipping Address</span>
-                <p style={{ margin: '2px 0 0 0', color: '#888', fontSize: '0.9rem' }}>
-                  {order.shipping_address}
-                </p>
+              
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                  <span style={labelStyle}>Item Purchased</span>
+                  <p style={{ margin: '2px 0 0 0', fontWeight: '800', color: '#f8df00', fontSize: '1.2rem' }}>
+                    {order.item_name} (Price: {parseFloat(order.amount).toFixed(4)} ETH)
+                  </p>
+                </div>
+                <div>
+                  <span style={labelStyle}>Recipient</span>
+                  <p style={{ margin: '2px 0 0 0', fontWeight: '600', color: '#fff' }}>
+                    {order.full_name} • {order.email} • {order.phone_number}
+                  </p>
+                </div>
+                <div>
+                   <span style={labelStyle}>Shipping Address</span>
+                   <p style={{ margin: '2px 0 0 0', color: '#bbb', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+                     {order.shipping_address}
+                   </p>
+                </div>
+                <div>
+                   <span style={labelStyle}>Wallet Address</span>
+                   <p style={{ margin: '2px 0 0 0', color: '#888', fontSize: '0.8rem', wordBreak: 'break-all' }}>
+                     {order.wallet_address}
+                   </p>
+                </div>
+                <div>
+                  <span style={labelStyle}>Transaction Link</span>
+                  <a 
+                    href={`https://sepolia.etherscan.io/tx/${order.transaction_hash}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    style={{ color: '#00a6ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600', display: 'inline-block', marginTop: '3px' }}
+                  >
+                    View Etherscan ↗
+                  </a>
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'flex-end' }}>
                 <div 
                   style={{
                     ...statusBadge, 
-                    backgroundColor: isCompleted ? '#2ecc71' : isCancelled ? '#e74c3c' : '#e67e22'
+                    backgroundColor: isCompleted ? '#2ecc71' : isCancelled ? '#e74c3c' : '#f8df00'
                   }}
                 >
                   {order.status}
                 </div>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                  
+
+                <div style={{ display: 'flex', gap: '10px' }}>
                   {/* Complete Button Trigger */}
                   <button 
                     disabled={isCompleted || isCancelled}
-                    onClick={() => setPendingConfirmationId(order.id)} 
+                    onClick={() => setPendingAction({ id: order.id, status: 'Completed'})} 
                     style={{
                       ...miniActionBtn,
                       opacity: (isCompleted || isCancelled) ? 0.3 : 1,
@@ -89,10 +117,10 @@ function ShippingView() {
                     Complete
                   </button>
 
-                  {/* Cancel Button - Permanently disabled and greyed out if order status matches processed targets */}
+                  {/* Cancel Button Trigger */}
                   <button 
                     disabled={isCompleted || isCancelled}
-                    onClick={() => handleUpdateStatus(order.id, 'Cancelled')} 
+                    onClick={() => setPendingAction({ id: order.id, status: 'Cancelled'})} 
                     style={{
                       ...miniActionBtn, 
                       backgroundColor: '#1a1a1a', 
@@ -104,7 +132,6 @@ function ShippingView() {
                   >
                     Cancel
                   </button>
-
                 </div>
               </div>
             </div>
@@ -113,27 +140,36 @@ function ShippingView() {
       )}
 
       {/* --- CUSTOM DARK LUXURY CONFIRMATION POPUP OVERLAY --- */}
-      {pendingConfirmationId !== null && (
+      {pendingAction !== null && (
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#f8df00', fontSize: '1.4rem', fontWeight: '800' }}>
-              PROCEED WITH FULFILLMENT?
+            <h3 style={{ 
+              margin: '0 0 10px 0', 
+              color: pendingAction.status === 'Cancelled' ? '#e74c3c' : '#f8df00', 
+              fontSize: '1.4rem', 
+              fontWeight: '800' 
+            }}>
+              MARK AS {pendingAction.status.toUpperCase()}?
             </h3>
             <p style={{ color: '#888', fontSize: '0.9rem', lineHeight: '1.5', margin: '0 0 25px 0' }}>
-              Are you sure you want to log this order item asset as **COMPLETED**? This secure state transition can no longer be cancelled once committed to the datastore ledger.
+              Please confirm your action.
             </p>
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
               <button 
-                onClick={() => setPendingConfirmationId(null)} 
+                onClick={() => setPendingAction(null)} 
                 style={modalCancelBtn}
               >
                 BACK
               </button>
               <button 
-                onClick={() => handleUpdateStatus(pendingConfirmationId, 'Completed')} 
-                style={modalConfirmBtn}
+                onClick={() => handleUpdateStatus(pendingAction.id, pendingAction.status)} 
+                style={{
+                  ...modalConfirmBtn,
+                  backgroundColor: pendingAction.status === 'Cancelled' ? '#e74c3c' : '#f8df00',
+                  color: pendingAction.status === 'Cancelled' ? '#fff' : '#000'
+                }}
               >
-                CONFIRM SYSTEM STATE
+                CONFIRM
               </button>
             </div>
           </div>
@@ -211,8 +247,15 @@ function SalesView() {
                       <span style={labelStyle}>REVENUE</span>
                       <p style={dataStyle}>{stats.totalValue.toFixed(4)} ETH</p>
                     </div>
-                    <div style={qrWrapperStyle}>
-                      <QRCodeSVG value={`https://sepolia.etherscan.io/tx/${itemDetails?.transaction_hash}`} size={44} bgColor="transparent" fgColor="#fff" />
+                    <div>
+                      <a 
+                        href={`https://sepolia.etherscan.io/tx/${itemDetails?.transaction_hash}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        style={{ color: '#00a6ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600' }}
+                      >
+                        View Record ↗
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -273,13 +316,13 @@ const activeTabStyle = { padding: '10px 25px', backgroundColor: '#f8df00', color
 const inactiveTabStyle = { padding: '10px 25px', backgroundColor: 'transparent', color: '#666', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' };
 
 const cardStyle: React.CSSProperties = {
-  backgroundColor: '#0c0c0c', borderRadius: '24px', overflow: 'hidden', border: '1px solid #1a1a1a', display: 'flex', padding: '20px', gap: '20px', alignItems: 'center'
+  backgroundColor: '#0c0c0c', borderRadius: '24px', overflow: 'hidden', border: '1px solid #1a1a1a', display: 'flex', padding: '24px', gap: '25px', alignItems: 'center'
 };
 
-const thumbStyle = { width: "100px", height: "100px", borderRadius: "12px", objectFit: "cover" as const, flexShrink: 0 };
-const labelStyle = { display: 'block', fontSize: '0.6rem', color: '#444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' };
-const statusBadge = { padding: '5px 12px', borderRadius: '100px', color: '#000', fontSize: '0.65rem', fontWeight: '800', display: 'inline-block', textTransform: 'uppercase' as const };
-const miniActionBtn = { backgroundColor: '#fff', color: '#000', border: 'none', padding: '8px 15px', borderRadius: '8px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' };
+const thumbStyle = { width: "110px", height: "110px", borderRadius: "14px", objectFit: "cover" as const, flexShrink: 0 };
+const labelStyle = { display: 'block', fontSize: '0.65rem', color: '#444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' };
+const statusBadge = { padding: '5px 14px', borderRadius: '100px', color: '#000', fontSize: '0.65rem', fontWeight: '800', display: 'inline-block', textTransform: 'uppercase' as const };
+const miniActionBtn = { backgroundColor: '#fff', color: '#000', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' };
 const loaderStyle = { textAlign: 'center' as const, padding: '100px', color: '#444', letterSpacing: '2px', fontWeight: '800' };
 
 const revenueCardStyle: React.CSSProperties = {
@@ -287,7 +330,7 @@ const revenueCardStyle: React.CSSProperties = {
 };
 
 const gridStyle: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px',
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px',
 };
 
 const imageWrapperStyle: React.CSSProperties = { position: 'relative', width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 };
@@ -297,11 +340,10 @@ const badgeStyle: React.CSSProperties = {
 };
 
 const infoContainerStyle: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column' };
-const itemTitleStyle = { fontSize: '1.3rem', fontWeight: '700', margin: '0', color: '#fff' };
+const itemTitleStyle = { fontSize: '1.4rem', fontWeight: '800', margin: '0', color: '#fff' };
 const dividerStyle = { height: '1px', backgroundColor: '#1a1a1a', margin: '12px 0' };
 const statRowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
-const dataStyle = { margin: '4px 0 0 0', fontSize: '0.9rem', color: '#aaa', fontWeight: '500' };
-const qrWrapperStyle = { padding: '6px', backgroundColor: '#151515', borderRadius: '10px', border: '1px solid #222', display: 'inline-flex' };
+const dataStyle = { margin: '4px 0 0 0', fontSize: '1rem', color: '#aaa', fontWeight: '600' };
 const secondaryButtonStyle = { padding: '10px 20px', backgroundColor: 'transparent', color: '#888', borderRadius: '10px', border: '1px solid #222', cursor: 'pointer', fontWeight: '600' };
 
 /* --- POPUP WINDOW COMPONENT OVERLAYS --- */
@@ -314,7 +356,7 @@ const modalContentStyle: React.CSSProperties = {
 };
 
 const modalConfirmBtn: React.CSSProperties = {
-  backgroundColor: '#f8df00', color: '#000', border: 'none', padding: '14px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', letterSpacing: '0.5px'
+  border: 'none', padding: '14px 24px', borderRadius: '10px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', letterSpacing: '0.5px'
 };
 
 const modalCancelBtn: React.CSSProperties = {

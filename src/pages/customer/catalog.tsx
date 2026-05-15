@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import MyConnectButton from "../../assets/components/connectbutton";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { claimTo } from "thirdweb/extensions/erc721";
-import { getContract, createThirdwebClient, prepareContractCall } from "thirdweb";
+import { getContract, createThirdwebClient } from "thirdweb";
 import { sepolia } from "thirdweb/chains";
 
 const client = createThirdwebClient({
@@ -16,7 +16,14 @@ export default function Catalog() {
   const [loading, setLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState<string | null>(null);
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
+  
+  // Blockchain Transaction UI State
   const [txHash, setTxHash] = useState<string | null>(null);
+
+  // --- NEW SHIPPING & DB STATES ---
+  const [purchasedItem, setPurchasedItem] = useState<any>(null);
+  const [shippingSubmitted, setShippingSubmitted] = useState(false);
+  const [shippingData, setShippingData] = useState({ fullName: '', email: '', address: '', phone: '' });
 
   const account = useActiveAccount();
   const { mutate: sendTransaction, isPending: isTxPending } = useSendTransaction();
@@ -45,37 +52,67 @@ export default function Catalog() {
 
       const contract = getContract({
         client,
-        address: process.env.REACT_APP_CONTRACT_ADDRESS || "0xe2E14c2351f3C19D1aaE477525c4D38B7FD325b0",
+        address: import.meta.env.VITE_CONTRACT_ADDRESS || "0xe2E14c2351f3C19D1aaE477525c4D38B7FD325b0",
         chain: sepolia,
       });
-
-      // Prepare the claim transaction
-      const tx = prepareContractCall({
+      
+      const tx = claimTo({
         contract,
-        method: "function claim(address to, uint256 tokenId, uint256 quantity, address currencyAddress, uint256 pricePerToken, (bytes32[] proof, uint256 quantityLimitPerWallet, uint256 pricePerToken, address currency, uint256 startTime, uint256 endTime, bytes32 merkleRoot, uint128 maxClaimableSupply, uint256 supplyClaimed, uint256 quantityClaimed) data, bytes signature)",
-        params: [
-          account.address,
-          BigInt(item.token_id || 0),
-          BigInt(1),
-          "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-          BigInt(item.price_wei || 0),
-        ],
+        to: account.address,
+        quantity: BigInt(1),
       });
 
       sendTransaction(tx as any, {
         onSuccess: (receipt: any) => {
-          setTxHash(receipt);
+          setTxHash(receipt.transactionHash || receipt);
+          setPurchasedItem(item); // Save the item data for backend
+          setShippingSubmitted(false); // Reset form visibility
           console.log("✅ NFT claimed! Tx:", receipt);
           setBuyingItemId(null);
         },
         onError: (error: any) => {
           console.error("❌ Claim failed:", error);
+          alert("Purchase failed. See console for details.");
           setBuyingItemId(null);
         },
       });
     } catch (error) {
       console.error("Error initiating purchase:", error);
       setBuyingItemId(null);
+    }
+  };
+
+  // --- SUBMIT COMPLETED ORDER TO BACKEND ---
+  const handleShippingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!account || !txHash || !purchasedItem) return;
+
+    try {
+      const res = await fetch("http://localhost:3001/shipping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: account.address,
+          transaction_hash: txHash,
+          full_name: shippingData.fullName,
+          email: shippingData.email,
+          shipping_address: shippingData.address,
+          phone_number: shippingData.phone,
+          item_name: purchasedItem.name,
+          item_image: purchasedItem.image_url,
+          amount: purchasedItem.price
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setShippingSubmitted(true); // Move to the ultimate success screen
+      } else {
+        alert("Failed to save shipping details: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to connect to backend");
     }
   };
 
@@ -118,7 +155,22 @@ export default function Catalog() {
                 
                 <div style={dividerStyle} />
 
-                {/* --- PROVENANCE & BUY SECTION --- */}
+                {/* --- PURCHASE BUTTON (ALIGNED RIGHT ABOVE PROVENANCE) --- */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+                  <button
+                    onClick={() => handleBuyNow(item)}
+                    style={{
+                      ...buyButtonStyle,
+                      opacity: buyingItemId === item.id && isTxPending ? 0.7 : 1,
+                      cursor: buyingItemId === item.id && isTxPending ? 'not-allowed' : 'pointer',
+                    }}
+                    disabled={buyingItemId === item.id && isTxPending}
+                  >
+                    {buyingItemId === item.id && isTxPending ? 'Process..' : 'Purchase'}
+                  </button>
+                </div>
+
+                {/* --- PROVENANCE SECTION --- */}
                 <div style={provenanceSectionStyle}>
                   <div 
                     style={qrWrapperStyle} 
@@ -138,20 +190,9 @@ export default function Catalog() {
                       onClick={() => setSelectedTx(item.transaction_hash)} 
                       style={popupTriggerStyle}
                     >
-                      Inspect Item Ledger 🔍
+                      Inspect Ledger 
                     </button>
                   </div>
-                  <button
-                    onClick={() => handleBuyNow(item)}
-                    style={{
-                      ...buyButtonStyle,
-                      opacity: buyingItemId === item.id && isTxPending ? 0.7 : 1,
-                      cursor: buyingItemId === item.id && isTxPending ? 'not-allowed' : 'pointer',
-                    }}
-                    disabled={buyingItemId === item.id && isTxPending}
-                  >
-                    {buyingItemId === item.id && isTxPending ? 'Processing...' : 'Buy Now'}
-                  </button>
                 </div>
               </div>
             </div>
@@ -165,7 +206,7 @@ export default function Catalog() {
           <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, color: '#f8df00', fontSize: '1.2rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                Provenance Token
+                NFT
               </h3>
               <button style={closeBtnStyle} onClick={() => setSelectedTx(null)}>✕</button>
             </div>
@@ -204,13 +245,53 @@ export default function Catalog() {
         </div>
       )}
 
-      {/* --- TRANSACTION SUCCESS MODAL --- */}
-      {txHash && (
+      {/* --- SHIPPING INFO MODAL --- */}
+      {txHash && purchasedItem && !shippingSubmitted && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <h3 style={{ margin: 0, color: '#f8df00', fontSize: '1.2rem', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '20px' }}>
+              Shipping Details Required
+            </h3>
+            <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '20px' }}>
+              Blockchain transaction successful! Please provide a destination for your physical asset.
+            </p>
+
+            <form onSubmit={handleShippingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <input 
+                type="text" required placeholder="Full Name" 
+                value={shippingData.fullName} onChange={(e) => setShippingData({...shippingData, fullName: e.target.value})}
+                style={inputStyle} 
+              />
+              <input 
+                type="email" required placeholder="Email Address" 
+                value={shippingData.email} onChange={(e) => setShippingData({...shippingData, email: e.target.value})}
+                style={inputStyle} 
+              />
+              <input 
+                type="tel" required placeholder="Phone Number" 
+                value={shippingData.phone} onChange={(e) => setShippingData({...shippingData, phone: e.target.value})}
+                style={inputStyle} 
+              />
+              <textarea 
+                required placeholder="Full Shipping Address" 
+                value={shippingData.address} onChange={(e) => setShippingData({...shippingData, address: e.target.value})}
+                style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} 
+              />
+              <button type="submit" style={{ ...buyButtonStyle, width: '100%', marginTop: '10px' }}>
+                Secure physical delivery
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- TRANSACTION SUCCESS OVERVIEW MODAL --- */}
+      {txHash && shippingSubmitted && (
         <div style={modalOverlayStyle} onClick={() => setTxHash(null)}>
           <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, color: '#00d084', fontSize: '1.2rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                ✅ Purchase Complete
+                 Order Logged
               </h3>
               <button style={closeBtnStyle} onClick={() => setTxHash(null)}>✕</button>
             </div>
@@ -219,7 +300,7 @@ export default function Catalog() {
             
             <div style={{ padding: '20px 0', textAlign: 'center' }}>
               <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '15px' }}>
-                Your NFT has been successfully claimed!
+                The asset has been digitally claimed and physical fulfillment is pending.
               </p>
               <a 
                 href={`https://sepolia.etherscan.io/tx/${txHash}`} 
@@ -264,6 +345,7 @@ const logoStyle = { fontSize: '1.4rem', fontWeight: '900', letterSpacing: '-1px'
 const navRightSideStyle = { display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' as const };
 const linkStyle = { color: '#888', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' };
 const heroTitleStyle = { fontSize: 'clamp(3rem, 10vw, 5.5rem)', fontWeight: '900', margin: '0', letterSpacing: '-3px' };
+const loaderStyle = { textAlign: 'center' as const, padding: '100px 0', color: '#444', letterSpacing: '2px', fontWeight: '800' };
 
 const gridStyle: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '40px', width: '100%',
@@ -293,44 +375,31 @@ const qrWrapperStyle = {
 };
 
 const provenanceLabelStyle = { display: 'block', fontSize: '0.6rem', color: '#444', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' as const };
-const popupTriggerStyle = { background: 'none', border: 'none', color: '#f8df00', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', padding: 0, display: 'block', marginTop: '3px', textAlign: 'left' as const };
+
+const popupTriggerStyle = { background: 'none', border: 'none', color: '#888', fontSize: '0.8rem', cursor: 'pointer', padding: 0, marginTop: '2px', textDecoration: 'underline' };
 
 const buyButtonStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #f8df00 0%, #ffd700 100%)',
-  border: 'none',
-  color: '#000',
-  fontSize: '0.85rem',
-  fontWeight: '800',
-  cursor: 'pointer',
-  padding: '8px 16px',
-  borderRadius: '8px',
-  marginLeft: 'auto',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  transition: 'all 0.2s',
+  padding: '8px 24px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '100px', fontWeight: '800', transform: 'scale(1)', transition: 'transform 0.2s', letterSpacing: '0.5px'
 };
 
-const loaderStyle = { textAlign: 'center' as const, padding: '120px 0', color: '#444', letterSpacing: '2px', fontWeight: '800' };
-
+// --- MODAL STYLES ---
 const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
+  position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
 };
 
 const modalContentStyle: React.CSSProperties = {
-  backgroundColor: '#0c0c0c', border: '1px solid #222', padding: '35px', borderRadius: '28px', width: '90%', maxWidth: '440px', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+  backgroundColor: '#0c0c0c', border: '1px solid #222', padding: '40px', borderRadius: '28px', width: '90%', maxWidth: '500px', boxShadow: '0 20px 60px rgba(0,0,0,0.7)', textAlign: 'left'
 };
 
-const closeBtnStyle = { background: 'none', border: 'none', color: '#555', fontSize: '1.1rem', cursor: 'pointer', transition: 'color 0.2s' };
-
-const modalQrContainerStyle = {
-  display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '30px 0 25px 0',
-};
-
-const modalQrWrapperStyle = {
-  padding: '14px', backgroundColor: '#151515', borderRadius: '18px', border: '1px solid #222', marginBottom: '20px', display: 'inline-flex',
-};
+const modalQrContainerStyle = { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '20px', padding: '20px 0' };
+const modalQrWrapperStyle = { padding: '15px', backgroundColor: '#151515', borderRadius: '20px', border: '1px solid #222', display: 'inline-flex' };
+const closeBtnStyle = { background: 'none', border: 'none', color: '#666', fontSize: '1.2rem', cursor: 'pointer' };
 
 const modalExplorerLinkStyle = {
-  color: '#00a6ff',
-  textDecoration: 'none', fontSize: '0.9rem', fontWeight: '700', letterSpacing: '0.5px', transition: 'opacity 0.2s',
+  display: 'inline-block', color: '#00a6ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600', padding: '8px 16px', backgroundColor: 'rgba(0, 166, 255, 0.1)', borderRadius: '100px'
+};
+
+// --- FORM STYLES ---
+const inputStyle: React.CSSProperties = {
+  backgroundColor: '#111', border: '1px solid #333', color: '#fff', padding: '12px', borderRadius: '8px', fontFamily: '"Inter", sans-serif', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box'
 };
