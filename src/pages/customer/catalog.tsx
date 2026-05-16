@@ -134,7 +134,7 @@ export default function Catalog() {
 
       {/* --- ASSET GRID --- */}
       {loading ? (
-        <div style={loaderStyle}>Synchronizing item drop matrix...</div>
+        <div style={loaderStyle}>Syncing takes a minute...</div>
       ) : (
         <div style={gridStyle}>
           {listings.map((item) => (

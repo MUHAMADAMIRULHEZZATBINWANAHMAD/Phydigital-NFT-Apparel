@@ -48,7 +48,7 @@ export default function OrderHistory() {
       {!account ? (
         <div style={loaderStyle}>Connect your wallet to review order status archive ledger.</div>
       ) : loading ? (
-        <div style={loaderStyle}>Retrieving provenance files...</div>
+        <div style={loaderStyle}>Syncing takes a minute...</div>
       ) : orders.length === 0 ? (
         <div style={loaderStyle}>No orders found under this secure account wallet signature.</div>
       ) : (

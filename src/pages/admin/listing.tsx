@@ -29,7 +29,7 @@ function ProductList() {
     <div style={{ marginTop: "40px" }}>
       <h2 style={sectionHeaderStyle}>Inventory Archive</h2>
       {loading ? (
-        <p style={loaderStyle}>Loading collection...</p>
+        <p style={loaderStyle}>Syncing takes a minute...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100%, 1fr))", gap: "25px" }}>
           {listings.map((item) => (
