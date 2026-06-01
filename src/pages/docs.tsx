@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-// --- DATA FOR OUR DOCUMENTATION TOPICS ---
+// --- DATA FOR OUR DOCUMENTATION TOPICS (No changes here) ---
 const docTopics = {
   connect: {
     title: "Connecting Your Wallet",
@@ -58,54 +58,56 @@ const docTopics = {
 
 type TopicKey = keyof typeof docTopics;
 
-// --- FINAL, CORRECTED COMPONENT ---
 export default function Docs() {
   const [activeTopic, setActiveTopic] = useState<TopicKey>('connect');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State to control sidebar
 
-  const finalMediaQuery = `
-    @media (max-width: 820px) {
-      #docs-layout {
-        flex-direction: column;
-        gap: 40px;
-      }
-      #docs-sidebar {
-        flex-basis: auto;
-        border-right: none;
-        padding-right: 0;
-        border-bottom: 1px solid #1a1a1a;
-        padding-bottom: 30px;
-      }
-    }
-  `;
+  const handleTopicSelect = (key: TopicKey) => {
+    setActiveTopic(key);
+    setIsSidebarOpen(false); // Close sidebar after selecting a topic
+  };
 
   return (
     <div style={containerStyle}>
-      <style>{finalMediaQuery}</style>
-      <nav style={navStyle}>
-        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
-        </Link>
-        <Link to="/" style={linkStyle}>← Back</Link>
-      </nav>
-      <header style={{ marginBottom: '60px' }}>
-        <h1 style={heroTitleStyle}>Guidance & Support</h1>
-        <p style={{ color: '#666', fontSize: '1.2rem', marginTop: '10px' }}>
-          Your guide to navigating the phygital experience.
-        </p>
-      </header>
-      <div id="docs-layout" style={mainLayoutStyle}>
-        <aside id="docs-sidebar" style={sidebarStyle}>
+      {/* --- OVERLAPPING SIDEBAR --- */}
+      {isSidebarOpen && (
+        <div style={modalOverlayStyle} onClick={() => setIsSidebarOpen(false)}></div>
+      )}
+      <aside style={{...sidebarStyle, transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)'}}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px' }}>
           <h3 style={sidebarTitleStyle}>TOPICS</h3>
+          <button style={closeButtonStyle} onClick={() => setIsSidebarOpen(false)}>✕</button>
+        </div>
+        <div style={{ padding: '0 20px 20px 20px' }}>
           {Object.keys(docTopics).map((key) => (
             <button
               key={key}
-              onClick={() => setActiveTopic(key as TopicKey)}
+              onClick={() => handleTopicSelect(key as TopicKey)}
               style={activeTopic === key ? activeSidebarLinkStyle : sidebarLinkStyle}
             >
               {docTopics[key as TopicKey].title}
             </button>
           ))}
-        </aside>
+        </div>
+      </aside>
+
+      {/* --- MAIN PAGE CONTENT --- */}
+      <div style={{ opacity: isSidebarOpen ? 0.5 : 1, transition: 'opacity 0.3s' }}>
+        <nav style={navStyle}>
+          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+          </Link>
+          {/* Button to open the sidebar */}
+          <button style={topicsButtonStyle} onClick={() => setIsSidebarOpen(true)}>
+            ☰ Topics
+          </button>
+        </nav>
+        <header style={{ marginBottom: '60px' }}>
+          <h1 style={heroTitleStyle}>Guidance & Support</h1>
+          <p style={{ color: '#666', fontSize: '1.2rem', marginTop: '10px' }}>
+            Your guide to navigating the phygital experience.
+          </p>
+        </header>
         <main style={contentStyle}>
           <h2 style={contentTitleStyle}>{docTopics[activeTopic].title}</h2>
           <div style={contentBodyStyle}>
@@ -117,13 +119,12 @@ export default function Docs() {
   );
 }
 
-
 // ===================================================================
-// STYLES (CONSISTENT WITH YOUR APP'S DESIGN)
+// STYLES
 // ===================================================================
 
 const containerStyle: React.CSSProperties = {
-  backgroundColor: '#050505', color: '#fff', minHeight: '100vh', padding: '0 6% 120px 6%', fontFamily: '"Inter", sans-serif', boxSizing: 'border-box',
+  backgroundColor: '#050505', color: '#fff', minHeight: '100vh', padding: '0 6% 120px 6%', fontFamily: '"Inter", sans-serif', boxSizing: 'border-box', position: 'relative', overflowX: 'hidden'
 };
 
 const navStyle: React.CSSProperties = {
@@ -131,43 +132,38 @@ const navStyle: React.CSSProperties = {
 };
 
 const logoStyle = { fontSize: '1.4rem', fontWeight: '900', letterSpacing: '-1px', margin: 0 };
-const linkStyle = { color: '#888', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' };
 const heroTitleStyle = { fontSize: 'clamp(2.5rem, 8vw, 5rem)', fontWeight: '900', margin: '0', letterSpacing: '-3px' };
 
-const mainLayoutStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '60px',
-  flexDirection: 'row',
+const topicsButtonStyle: React.CSSProperties = {
+  background: '#111', color: '#888', border: '1px solid #222', padding: '10px 20px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem'
 };
 
+// --- Sidebar Styles (Now for Overlapping) ---
 const sidebarStyle: React.CSSProperties = {
-  flex: '0 0 250px',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  height: '100%',
+  width: '300px',
+  maxWidth: '80vw',
+  backgroundColor: '#0c0c0c',
   borderRight: '1px solid #1a1a1a',
-  paddingRight: '40px',
+  zIndex: 1001,
+  transition: 'transform 0.3s ease-in-out',
+  display: 'flex',
+  flexDirection: 'column',
 };
 
 const sidebarTitleStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
-  color: '#444',
-  fontWeight: '900',
-  textTransform: 'uppercase',
-  letterSpacing: '1px',
-  marginBottom: '20px',
+  fontSize: '0.8rem', color: '#666', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', margin: 0
+};
+
+const closeButtonStyle: React.CSSProperties = {
+  background: 'none', border: 'none', color: '#666', fontSize: '1.5rem', cursor: 'pointer'
 };
 
 const sidebarLinkStyle: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  padding: '12px 18px',
-  marginBottom: '8px',
-  background: 'transparent',
-  border: 'none',
-  color: '#888',
-  fontSize: '0.9rem',
-  fontWeight: '600',
-  borderRadius: '8px',
-  cursor: 'pointer',
+  display: 'block', width: '100%', textAlign: 'left', padding: '12px 18px', marginBottom: '8px', background: 'transparent', border: 'none', color: '#888', fontSize: '1rem', fontWeight: '600', borderRadius: '8px', cursor: 'pointer',
 };
 
 const activeSidebarLinkStyle: React.CSSProperties = {
@@ -176,22 +172,21 @@ const activeSidebarLinkStyle: React.CSSProperties = {
   color: '#f8df00',
 };
 
+// --- Overlay Style ---
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', zIndex: 1000,
+};
+
+// --- Content Styles ---
 const contentStyle: React.CSSProperties = {
   flex: 1,
-  minWidth: '0',
+  minWidth: 0, // This is still important!
 };
 
 const contentTitleStyle: React.CSSProperties = {
-  fontSize: '2rem',
-  fontWeight: '800',
-  color: '#f8df00',
-  margin: '0 0 25px 0',
-  paddingBottom: '20px',
-  borderBottom: '1px solid #1a1a1a',
+  fontSize: '2rem', fontWeight: '800', color: '#f8df00', margin: '0 0 25px 0', paddingBottom: '20px', borderBottom: '1px solid #1a1a1a',
 };
 
 const contentBodyStyle: React.CSSProperties = {
-  color: '#aaa',
-  fontSize: '1rem',
-  lineHeight: '1.7',
+  color: '#aaa', fontSize: '1rem', lineHeight: '1.7',
 };
