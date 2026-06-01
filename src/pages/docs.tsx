@@ -85,7 +85,7 @@ export default function Docs() {
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
           <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
         </Link>
-        <Link to="/customer/catalog" style={linkStyle}>← Back to Catalog</Link>
+        <Link to="/" style={linkStyle}>← Back</Link>
       </nav>
       <header style={{ marginBottom: '60px' }}>
         <h1 style={heroTitleStyle}>Guidance & Support</h1>
@@ -178,6 +178,7 @@ const activeSidebarLinkStyle: React.CSSProperties = {
 
 const contentStyle: React.CSSProperties = {
   flex: 1,
+  minWidth: '0',
 };
 
 const contentTitleStyle: React.CSSProperties = {
