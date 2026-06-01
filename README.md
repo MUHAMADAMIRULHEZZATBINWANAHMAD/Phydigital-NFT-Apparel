@@ -57,7 +57,7 @@ cd backend
 </> bash
 npm install
 
-// Create a .env file in this directory and add the following variables:
+</> env
 - **SUPABASE_URL**
 - **SUPABASE_SERVICE_ROLE_KEY**
 - **PINATA_JWT**
@@ -66,23 +66,25 @@ npm install
 - **SERVER_WALLET_ADDRESS**
 - **VAULT_ACCESS_TOKEN**
 
-// Run the backend server
+</> bash
 npm run dev
 
-//The backend will be running on http://localhost:3001.
+The backend will be running on http://localhost:3001
+
 
 ### 2. Frontend setup
-// Navigate to the root project directory
+</> bash
 cd ..
 
-// Install dependencies
+</> bash
 npm install
 
-// Create a .env file in this directory and add your contract address:
+</> env
 VITE_CONTRACT_ADDRESS
 
-// Run the frontend development server
+</> bash
 npm run dev
 
-//The frontend will be running on http://localhost:5173. You can now open this URL in your browser.
+The frontend will be running on http://localhost:5173.
+You can now open this URL in your browser.
 
