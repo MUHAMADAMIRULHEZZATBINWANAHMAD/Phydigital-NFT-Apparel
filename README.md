@@ -50,11 +50,11 @@ A Supabase account (for database and storage)
 A Pinata account (for IPFS)
 A Thirdweb account (for the smart contract and server wallet)
 
-1. Backend setup
-// Navigate to the backend directory
+### 1. Backend setup
+```bash
 cd backend
 
-// Install dependencies
+</> bash
 npm install
 
 // Create a .env file in this directory and add the following variables:
@@ -71,7 +71,7 @@ npm run dev
 
 //The backend will be running on http://localhost:3001.
 
-2. Frontend setup
+### 2. Frontend setup
 // Navigate to the root project directory
 cd ..
 
