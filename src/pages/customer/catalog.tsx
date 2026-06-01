@@ -120,7 +120,9 @@ export default function Catalog() {
     <div style={containerStyle}>
       {/* --- RESPONSIVE BRAND NAVIGATION --- */}
       <nav style={navStyle}>
-        <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        </Link>
         <div style={navRightSideStyle}>
           <Link to="/customer/order-history" style={linkStyle}>Order History</Link>
           <MyConnectButton />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 
 // Helper function to truncate long strings
@@ -134,7 +134,9 @@ export default function Listing() {
   return (
     <div style={containerStyle}>
       <nav style={navStyle}>
-        <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        </Link>
         <button onClick={() => navigate("/admin/dashboard")} style={secondaryButtonStyle}>
            SALES ↗
         </button>

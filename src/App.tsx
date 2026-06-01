@@ -3,6 +3,7 @@ import Mint from "./pages/admin/listing";
 import Catalog from "./pages/customer/catalog"; 
 import OrderHistory from "./pages/customer/order-history"; 
 import SalesDashboard from "./pages/admin/sales-dashboard";
+import Docs from "./pages/docs";
 
 // --- IMPORT YOUR MODULAR UI-VERSE BUTTON COMPONENT ---
 import Button from "./assets/components/button"; 
@@ -84,7 +85,20 @@ function Home() {
 
       {/* Brand Header */}
       <nav style={homeNavStyle}>
-        <h2 style={logoStyle}>PHYDIGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        <h2 style={logoStyle}>PHYGITAL<span style={{ color: '#f8df00' }}>.</span></h2>
+        
+        {/* --- ADD THIS DOCS LINK --- */}
+        <Link 
+          to="/docs" 
+          style={{ 
+            color: '#888', 
+            textDecoration: 'none', 
+            fontSize: '0.9rem', 
+            fontWeight: '600' 
+          }}
+        >
+          Docs
+        </Link>
       </nav>
 
       {/* Main Feature Layout */}
@@ -111,7 +125,7 @@ function Home() {
 
           {/* HERO IMAGE (Right on Desktop, Top on Mobile) */}
           <div className="hero-img-container">
-            <img src={heroImage} alt="Phydigital Culture" />
+            <img src={heroImage} alt="Phygital Culture" />
           </div>
 
         </div>
@@ -133,6 +147,7 @@ function App() {
         <Route path="/customer/catalog" element={<Catalog />} />
         <Route path="/customer/order-history" element={<OrderHistory />} />
         <Route path="/admin/dashboard" element={<SalesDashboard />} />
+        <Route path="/docs" element={<Docs />} />
       </Routes>
     </BrowserRouter>
   );
@@ -160,6 +175,7 @@ const homeNavStyle: React.CSSProperties = {
   padding: '20px 6%',
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'space-between',
   zIndex: 10,
   flexShrink: 0,
 };
