@@ -8,12 +8,15 @@ This final year project is built on the conceptual framework of Web3. By utilizi
 This project demonstrates a split-hosting architecture, with a static React frontend deployed on Vercel for global speed and a dynamic Node.js backend on Render for handling server-side logic and blockchain transactions
 
 ## Core Features
--Admin Asset Forging: A secure admin panel for creating new apparel listings. The system uploads product images to Supabase Storage for fast retrieval and pins the NFT metadata (including the image URL) to Pinata (IPFS) for decentralized permanence.
--Server-Wallet Minting: The backend uses a secure, server-side wallet managed by Thirdweb Engine to handle all blockchain interactions. This means administrators can lazy-mint NFTs without needing to connect a personal wallet or manage gas fees directly.
--Dynamic Customer Catalog: The frontend fetches all available product listings from the backend, displaying them in a clean, responsive grid for customers to browse.
--Web3 NFT Claiming: Customers can connect their own Web3 wallets (like MetaMask) to purchase an item. The transaction is processed on the Sepolia testnet via the Thirdweb SDK, transferring the NFT directly to the buyer's address.
--Post-Purchase Shipping Logistics: After a successful NFT claim, the user is prompted to enter their shipping details. This information, along with the transaction hash and wallet address, is saved to a private Supabase table for order fulfillment.
--Order Management Dashboard: An admin-only dashboard to view all incoming shipping orders and update their fulfillment status (e.g., "Pending" to "Completed").
+- **Admin Asset Forging:** A secure admin panel for creating new apparel listings. The system uploads product images to Supabase Storage for fast retrieval and pins the NFT metadata (including the image URL) to Pinata (IPFS) for decentralized permanence.
+
+- **Server-Wallet Minting:** The backend uses a secure, server-side wallet managed by Thirdweb Engine to handle all blockchain interactions. This means administrators can lazy-mint NFTs without needing to connect a personal wallet or manage gas fees directly.
+  
+- **Dynamic Customer Catalog:** The frontend fetches all available product listings from the backend, displaying them in a clean, responsive grid for customers to browse.
+  
+- **Web3 NFT Claiming:** Customers can connect their own Web3 wallets (like MetaMask) to purchase an item. The transaction is processed on the Sepolia testnet via the Thirdweb SDK, transferring the NFT directly to the buyer's address.
+- **Post-Purchase Shipping Logistics:** After a successful NFT claim, the user is prompted to enter their shipping details. This information, along with the transaction hash and wallet address, is saved to a private Supabase table for order fulfillment.
+- **Order Management Dashboard:** An admin-only dashboard to view all incoming shipping orders and update their fulfillment status (e.g., "Pending" to "Completed").
 
 ## System Architecture
 This application uses a decoupled frontend and backend architecture:
@@ -55,13 +58,13 @@ cd backend
 npm install
 
 // Create a .env file in this directory and add the following variables:
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-PINATA_JWT=...
-THIRDWEB_SECRET_KEY=...
-THIRDWEB_SMART_CONTRACT_ADDRESS=...
-SERVER_WALLET_ADDRESS=...
-VAULT_ACCESS_TOKEN=...
+- **SUPABASE_URL**
+- **SUPABASE_SERVICE_ROLE_KEY**
+- **PINATA_JWT**
+- **THIRDWEB_SECRET_KEY**
+- **THIRDWEB_SMART_CONTRACT_ADDRESS**
+- **SERVER_WALLET_ADDRESS**
+- **VAULT_ACCESS_TOKEN**
 
 // Run the backend server
 npm run dev
@@ -76,7 +79,7 @@ cd ..
 npm install
 
 // Create a .env file in this directory and add your contract address:
-VITE_CONTRACT_ADDRESS=...
+VITE_CONTRACT_ADDRESS
 
 // Run the frontend development server
 npm run dev
