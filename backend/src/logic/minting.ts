@@ -76,7 +76,11 @@ export async function uploadToPinata(filePath: string, shirtName: string, descri
   };
 
   const jsonUpload = await pinata.upload.public.json(metadata);
-  const metadataUri = `ipfs://${jsonUpload.cid}`;
+
+  // Use a reliable public gateway. IPFS.io is usually universally accepted.
+  // We use the CID directly to form a clean URL.
+  const metadataUri = `https://ipfs.io/ipfs/${jsonUpload.cid}`;
+  
   console.log("✅ Metadata CID:", jsonUpload.cid);
 
   return { imageUrl: publicUrl, metadataUri, cid: jsonUpload.cid };
