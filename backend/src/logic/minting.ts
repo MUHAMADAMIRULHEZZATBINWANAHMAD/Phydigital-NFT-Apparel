@@ -50,51 +50,41 @@ export async function uploadToPinata(filePath: string, shirtName: string, descri
   console.log("Uploading image to Supabase Storage...");
   
   const fileData = fs.readFileSync(filePath);
-  const fileName = `${Date.now()}-${shirtName}.png`; // Unique filename
+  const fileName = `${Date.now()}-${shirtName}.png`; 
   
-  // Upload to Supabase Storage bucket
   const { data: storageData, error: storageError } = await supabase.storage
     .from('listing-image')
     .upload(fileName, fileData, { contentType: 'image/png' });
 
-  if (storageError) throw new Error(`Supabase Storage upload failed: ${storageError.message}`);
+  if (storageError) throw new Error(`Supabase Storage failed: ${storageError.message}`);
 
-  // Get public URL for the image
-  const { data: { publicUrl } } = supabase.storage
-    .from('listing-image')
-    .getPublicUrl(fileName);
-
+  const { data: { publicUrl } } = supabase.storage.from('listing-image').getPublicUrl(fileName);
   console.log("✅ Image uploaded to Supabase Storage:", publicUrl);
 
-  // Still upload metadata to Pinata for blockchain permanence
-  console.log("Uploading metadata to Pinata...");
   const metadata = {
     name: shirtName,
     description: description,
-    image: publicUrl, // Use the Supabase URL (faster than IPFS)
+    image: publicUrl, // Using fast Supabase URL
     attributes: attributes
   };
 
+  // We keep this just so your database still has a record of it
   const jsonUpload = await pinata.upload.public.json(metadata);
+  const metadataUri = `ipfs://${jsonUpload.cid}`; 
 
-  // Use a reliable public gateway. IPFS.io is usually universally accepted.
-  // We use the CID directly to form a clean URL.
-  const metadataUri = `https://ipfs.io/ipfs/${jsonUpload.cid}`;
-  
-  console.log("✅ Metadata CID:", jsonUpload.cid);
-
-  return { imageUrl: publicUrl, metadataUri, cid: jsonUpload.cid };
+  // 👇 NEW: Return the raw 'metadata' object as well
+  return { imageUrl: publicUrl, metadataUri, cid: jsonUpload.cid, metadata };
 }
 
-// ==========================================
-// FUNCTION 2: Lazy Mint (Add to Store)
-// ==========================================
-export async function prepareNFTForStore(metadataUri: string, price: string, supply: number) {
-  console.log(`Lazy minting NFT to contract from ${metadataUri}...`);
+
+// 👇 NEW: Accept 'metadata: any' instead of a string URL
+export async function prepareNFTForStore(metadata: any, price: string, supply: number) {
+  console.log(`Lazy minting NFT to contract using Thirdweb's auto-uploader...`);
   
   const lazyMintTx = lazyMint({
     contract,
-    nfts: [{ uri: metadataUri }],
+    // 👇 NEW: Pass the object directly. Thirdweb will automatically create the IPFS folder!
+    nfts: [metadata], 
   });
 
   const lazyMintReceipt = await sendAndConfirmTransaction({
@@ -103,9 +93,6 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
   });
   console.log("✅ NFT registered to contract!", lazyMintReceipt.transactionHash);
 
-  console.log(`Setting price to ${price} ETH and supply to ${supply}...`);
-  
-  // Set start time to 5 minutes ago to ensure it's immediately active on the blockchain
   const startTime = new Date();
   startTime.setMinutes(startTime.getMinutes() - 5);
 
@@ -116,7 +103,7 @@ export async function prepareNFTForStore(metadataUri: string, price: string, sup
         maxClaimableSupply: BigInt(supply),
         price: price,
         currencyAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-        startTime: startTime, // <-- THIS IS THE CRITICAL CHANGE
+        startTime: startTime,
       },
     ],
   });

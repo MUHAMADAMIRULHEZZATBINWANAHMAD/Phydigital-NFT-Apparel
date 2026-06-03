@@ -22,7 +22,7 @@ app.post("/mint", upload.single("image"), async (req, res) => {
     if (!imagePath) return res.status(400).json({ error: "Image required" });
 
     // 1. Upload to Supabase Storage + Pinata
-    const { imageUrl, metadataUri } = await uploadToPinata(
+    const { imageUrl, metadataUri, metadata } = await uploadToPinata( // ← Extract 'metadata'
       imagePath, 
       name, 
       description, 
@@ -30,7 +30,8 @@ app.post("/mint", upload.single("image"), async (req, res) => {
     );
 
     // 2. Lazy mint to contract
-    const { lazyMintHash } = await prepareNFTForStore(metadataUri, price, parseInt(supply));
+    // ← Pass 'metadata' instead of 'metadataUri'
+    const { lazyMintHash } = await prepareNFTForStore(metadata, price, parseInt(supply));
 
     // 3. Save listing to Supabase with BOTH image URL and metadata URI
     await supabase.from('store_listings').insert([{
