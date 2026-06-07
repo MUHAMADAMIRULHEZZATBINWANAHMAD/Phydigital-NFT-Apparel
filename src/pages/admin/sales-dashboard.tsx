@@ -57,9 +57,12 @@ function ShippingView() {
               
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
-                  <span style={labelStyle}>Item Purchased</span>
+                  <span style={labelStyle}>Order Details</span>
                   <p style={{ margin: '2px 0 0 0', fontWeight: '800', color: '#f8df00', fontSize: '1.2rem' }}>
-                    {order.item_name} (Price: {parseFloat(order.amount).toFixed(4)} ETH)
+                    {order.item_name} <span style={{ color: '#fff', fontSize: '1.1rem' }}>x {order.quantity || 1}</span>
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', fontWeight: '600', color: '#aaa', fontSize: '0.95rem' }}>
+                    Total Paid: <span style={{ color: '#2ecc71' }}>{parseFloat(order.amount).toFixed(4)} ETH</span> / RM {(parseFloat(order.amount) * 6447.92).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
