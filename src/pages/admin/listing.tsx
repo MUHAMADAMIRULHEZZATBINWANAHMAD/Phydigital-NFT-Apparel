@@ -92,7 +92,8 @@ function CreateForm() {
       { trait_type: "Value", value: value }
     ];
     formData.append("attributes", JSON.stringify(attributes));
-    formData.append("rm_price", rmPrice);  // NEW: Add RM price
+    formData.append("rm_price", rmPrice);  
+    formData.append("price", ethPrice); 
 
     try {
       const res = await fetch("https://phydigital-nft-apparel.onrender.com/mint", { 
