@@ -27,8 +27,13 @@ export default function Catalog() {
 
   const account = useActiveAccount();
   const { mutate: sendTransaction, isPending: isTxPending } = useSendTransaction();
+  const [conversionRate, setConversionRate] = useState<number | null>(null);
+  const [checkoutItem, setCheckoutItem] = useState<any>(null); 
+  const [checkoutQuantity, setCheckoutQuantity] = useState<number>(1);
+  const [purchasedQuantity, setPurchasedQuantity] = useState<number>(1); // To remember for the shipping form
 
   useEffect(() => {
+    // 1. Fetch catalog
     fetch("https://phydigital-nft-apparel.onrender.com/listings")
       .then((res) => res.json())
       .then((data) => {
@@ -38,16 +43,29 @@ export default function Catalog() {
       })
       .catch((err) => console.error("Catalog asset fetch error:", err))
       .finally(() => setLoading(false));
+
+    // 2. Fetch live ETH -> MYR rate
+    fetch("https://phydigital-nft-apparel.onrender.com/eth-price")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setConversionRate(data.myrPrice);
+      })
+      .catch((err) => console.error("Conversion rate error:", err));
   }, []);
 
-  const handleBuyNow = async (item: any) => {
-    if (!account) {
-      alert("Please connect your wallet first");
-      return;
-    }
+  // 1. Opens the confirmation modal
+  const openCheckout = (item: any) => {
+    if (!account) { alert("Please connect your wallet first"); return; }
+    setCheckoutItem(item);
+    setCheckoutQuantity(1);
+  };
+
+  // 2. Executes the blockchain transaction
+  const confirmPurchase = async () => {
+    if (!account || !checkoutItem) return;
 
     try {
-      setBuyingItemId(item.id);
+      setBuyingItemId(checkoutItem.id);
       setTxHash(null);
 
       const contract = getContract({
@@ -59,20 +77,21 @@ export default function Catalog() {
       const tx = claimTo({
         contract,
         to: account.address,
-        quantity: BigInt(1),
+        quantity: BigInt(checkoutQuantity), // 👇 NEW: Dynamic quantity
       });
 
       sendTransaction(tx as any, {
         onSuccess: (receipt: any) => {
           setTxHash(receipt.transactionHash || receipt);
-          setPurchasedItem(item); // Save the item data for backend
-          setShippingSubmitted(false); // Reset form visibility
-          console.log("✅ NFT claimed! Tx:", receipt);
+          setPurchasedItem(checkoutItem); 
+          setPurchasedQuantity(checkoutQuantity); // Save how many they bought for the DB
+          setShippingSubmitted(false);
           setBuyingItemId(null);
+          setCheckoutItem(null); // Close checkout modal
         },
         onError: (error: any) => {
           console.error("❌ Claim failed:", error);
-          alert("Purchase failed. See console for details.");
+          alert("Purchase failed.");
           setBuyingItemId(null);
         },
       });
@@ -100,7 +119,8 @@ export default function Catalog() {
           phone_number: shippingData.phone,
           item_name: purchasedItem.name,
           item_image: purchasedItem.image_url,
-          amount: purchasedItem.price
+          amount: (parseFloat(purchasedItem.price) * purchasedQuantity).toString(),
+          quantity: purchasedQuantity, // Include quantity in the order details
         }),
       });
 
@@ -151,7 +171,14 @@ export default function Catalog() {
               <div style={metaContainerStyle}>
                 <div style={titlePriceRowStyle}>
                   <h3 style={itemTitleStyle}>{item.name}</h3>
-                  <span style={priceTagStyle}>{item.price} ETH</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <span style={priceTagStyle}>{item.price} ETH</span>
+                    {conversionRate && (
+                      <span style={{ color: '#88b', fontSize: '0.85rem', fontWeight: '700', marginTop: '2px' }}>
+                        ≈ RM {(parseFloat(item.price) * conversionRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p style={descriptionStyle}>{item.description}</p>
                 
@@ -160,7 +187,7 @@ export default function Catalog() {
                 {/* --- PURCHASE BUTTON (ALIGNED RIGHT ABOVE PROVENANCE) --- */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
                   <button
-                    onClick={() => handleBuyNow(item)}
+                    onClick={() => openCheckout(item)}
                     style={{
                       ...buyButtonStyle,
                       opacity: buyingItemId === item.id && isTxPending ? 0.7 : 1,
@@ -243,6 +270,61 @@ export default function Catalog() {
                 {selectedTx}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+      {/* --- PRE-PURCHASE CHECKOUT MODAL --- */}
+      {checkoutItem && !isTxPending && !txHash && (
+        <div style={modalOverlayStyle} onClick={() => setCheckoutItem(null)}>
+          <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: 0, color: '#f8df00', fontSize: '1.4rem', textTransform: 'uppercase', marginBottom: '20px' }}>
+              Confirm Transaction
+            </h3>
+            
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+              <img src={checkoutItem.image_url} style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover' }} />
+              <div>
+                <h4 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', color: '#fff' }}>{checkoutItem.name}</h4>
+                <p style={{ margin: 0, color: '#888' }}>{checkoutItem.price} ETH each</p>
+              </div>
+            </div>
+
+            <div style={dividerStyle} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <span style={{ fontWeight: 'bold' }}>Quantity:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', backgroundColor: '#111', padding: '5px', borderRadius: '8px' }}>
+                <button 
+                  onClick={() => setCheckoutQuantity(Math.max(1, checkoutQuantity - 1))}
+                  style={{ background: '#222', border: 'none', color: '#fff', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                >-</button>
+                <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>{checkoutQuantity}</span>
+                <button 
+                  onClick={() => setCheckoutQuantity(checkoutQuantity + 1)}
+                  style={{ background: '#222', border: 'none', color: '#fff', width: '30px', height: '30px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                >+</button>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#111', padding: '15px', borderRadius: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                <span style={{ color: '#aaa' }}>Total Crypto (ETH)</span>
+                <span style={{ color: '#fff', fontWeight: 'bold' }}>{(parseFloat(checkoutItem.price) * checkoutQuantity).toFixed(4)} ETH</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#aaa' }}>Total Fiat (MYR)</span>
+                <span style={{ color: '#00d084', fontWeight: 'bold' }}>
+                  {conversionRate ? `≈ RM ${((parseFloat(checkoutItem.price) * checkoutQuantity) * conversionRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Calculating...'}
+                </span>
+              </div>
+            </div>
+
+            <button 
+              onClick={confirmPurchase}
+              style={{ ...buyButtonStyle, width: '100%', backgroundColor: '#f8df00', color: '#000' }}
+            >
+              Sign & Purchase
+            </button>
           </div>
         </div>
       )}

@@ -15,7 +15,7 @@ export default function OrderHistory() {
   useEffect(() => {
     if (account?.address) {
       setLoading(true);
-      fetch(`https://phydigital-nft-apparel.onrender.com/shipping-orders?wallet_address=${account.address}`)
+      fetch(`https://phydigital-nft-apparel.onrender.com/orders/${account.address}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success) setOrders(data.orders);
@@ -85,6 +85,12 @@ export default function OrderHistory() {
                   <span style={labelStyle}>DELIVERY LOCATION</span>
                   <p style={dataStyle}>{order.shipping_address}</p>
                 </div>
+
+                <div style={detailRowStyle}>
+                  <span style={labelStyle}>QUANTITY ORDERED</span>
+                  <p style={dataStyle}>{order.quantity} {order.quantity === 1 ? 'NFT' : 'NFTs'}</p>
+                </div>
+
 
                 {/* --- LEFT ALIGNED QR SECTION WITH BLUE LINK --- */}
                 <div style={leftAlignedQrContainer}>

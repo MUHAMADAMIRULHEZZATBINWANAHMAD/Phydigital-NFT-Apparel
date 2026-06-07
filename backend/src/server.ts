@@ -52,7 +52,7 @@ app.post("/mint", upload.single("image"), async (req, res) => {
 
 // 2. SHIPPING ENDPOINT (Triggered by frontend after successful purchase)
 app.post("/shipping", async (req, res) => {
-  const { wallet_address, transaction_hash, full_name, email, shipping_address, phone_number, item_name, item_image, amount } = req.body;
+  const { wallet_address, transaction_hash, full_name, email, shipping_address, phone_number, item_name, item_image, amount, quantity } = req.body;
 
   if (!wallet_address || !transaction_hash || !shipping_address) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
@@ -69,6 +69,7 @@ app.post("/shipping", async (req, res) => {
         item_name,        // Added item name
         item_image,       // Added item image
         amount,
+        quantity,
         status: 'Pending'
     }]);
 
@@ -142,6 +143,27 @@ app.put("/shipping-orders/:id", async (req, res) => {
 
     if (error) throw error;
     res.json({ success: true, updatedOrder: data[0] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7. GET LIVE ETH PRICE IN MYR
+app.get("/eth-price", async (req, res) => {
+  try {
+    const API_KEY = process.env.COINGECKO_API_KEY;
+    // 👇 CHANGED: Use 'api.coingecko.com' for free keys instead of 'pro-api'
+    const API_URL = 'https://api.coingecko.com/api/v3/simple/price';
+    
+    // 👇 CHANGED: Parameter must be 'x_cg_demo_api_key' for free keys
+    const response = await fetch(`${API_URL}?ids=ethereum&vs_currencies=myr&x_cg_demo_api_key=${API_KEY}`);
+    const data = await response.json();
+    
+    if (!data.ethereum || !data.ethereum.myr) {
+      throw new Error("Invalid response from CoinGecko");
+    }
+
+    res.json({ success: true, myrPrice: data.ethereum.myr });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
