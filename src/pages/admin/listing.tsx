@@ -143,6 +143,8 @@ function CreateForm() {
               <input 
                 type="number"
                 step="0.01"
+                min="0.01"     // ← ADD THIS: Prevent negative or zero
+                required       // ← ADD THIS: Intercepts submission if empty
                 placeholder="Price (RM)"
                 value={rmPrice}
                 onChange={handleRmPriceChange}

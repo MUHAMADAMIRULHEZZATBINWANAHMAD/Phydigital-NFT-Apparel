@@ -19,7 +19,10 @@ app.post("/mint", upload.single("image"), async (req, res) => {
     const { name, description, supply, price, rm_price, attributes } = req.body;  // Extract rm_price
     const imagePath = req.file?.path;
 
+    // ADD THESE SAFETY CHECKS:
     if (!imagePath) return res.status(400).json({ error: "Image required" });
+    if (!price || parseFloat(price) <= 0) return res.status(400).json({ error: "Valid ETH price required" });
+    if (!supply || parseInt(supply) <= 0) return res.status(400).json({ error: "Valid supply count required" });
 
     // 1. Upload to Supabase Storage + Pinata
     const { imageUrl, metadataUri, metadata } = await uploadToPinata(
