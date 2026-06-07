@@ -72,19 +72,22 @@ export async function uploadToPinata(filePath: string, shirtName: string, descri
   const jsonUpload = await pinata.upload.public.json(metadata);
   const metadataUri = `ipfs://${jsonUpload.cid}`; 
 
-  // 👇 NEW: Return the raw 'metadata' object as well
+  //  NEW: Return the raw 'metadata' object as well
   return { imageUrl: publicUrl, metadataUri, cid: jsonUpload.cid, metadata };
 }
 
 
-// 👇 NEW: Accept 'metadata: any' instead of a string URL
+//  NEW: Accept 'metadata: any' instead of a string URL
 export async function prepareNFTForStore(metadata: any, price: string, supply: number) {
-  console.log(`Lazy minting NFT to contract using Thirdweb's auto-uploader...`);
+  console.log(`Lazy minting ${supply} identical copies using Thirdweb's auto-uploader...`);
   
+  //  NEW: Duplicate the single metadata object into an array to match your supply exactly
+  const metadataArray = Array(supply).fill(metadata);
+
   const lazyMintTx = lazyMint({
     contract,
-    // 👇 NEW: Pass the object directly. Thirdweb will automatically create the IPFS folder!
-    nfts: [metadata], 
+    //  NEW: Pass the full array so Thirdweb creates a metadata file for EVERY copy
+    nfts: metadataArray, 
   });
 
   const lazyMintReceipt = await sendAndConfirmTransaction({

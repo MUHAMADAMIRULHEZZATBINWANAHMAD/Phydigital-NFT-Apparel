@@ -91,6 +91,13 @@ export default function OrderHistory() {
                   <p style={dataStyle}>{order.quantity} {order.quantity === 1 ? 'NFT' : 'NFTs'}</p>
                 </div>
 
+                <div style={detailRowStyle}>
+                  <span style={labelStyle}>AMOUNT PAID</span>
+                  <p style={dataStyle}>
+                    {parseFloat(order.amount).toFixed(4)} ETH / RM {(parseFloat(order.amount) * 6447.92).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+
 
                 {/* --- LEFT ALIGNED QR SECTION WITH BLUE LINK --- */}
                 <div style={leftAlignedQrContainer}>

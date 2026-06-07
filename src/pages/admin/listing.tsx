@@ -66,20 +66,46 @@ function CreateForm() {
   const [color, setColor] = useState("");
   const [country, setCountry] = useState("");
   const [value, setValue] = useState("");
+  const [rmPrice, setRmPrice] = useState("");  // NEW
+  const [ethPrice, setEthPrice] = useState("");  // NEW
+  const conversionRate = 6447.92;  // NEW
+
+  // NEW: Handle RM input and auto-calculate ETH
+  const handleRmPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rm = parseFloat(e.target.value) || 0;
+    setRmPrice(e.target.value);
+    if (rm > 0) {
+      setEthPrice((rm / conversionRate).toFixed(6));
+    } else {
+      setEthPrice("");
+    }
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const attributes = [{ trait_type: "Color", value: color }, { trait_type: "Country", value: country }, { trait_type: "Value", value: value }];
+    const attributes = [
+      { trait_type: "Color", value: color }, 
+      { trait_type: "Country", value: country }, 
+      { trait_type: "Value", value: value }
+    ];
     formData.append("attributes", JSON.stringify(attributes));
+    formData.append("rm_price", rmPrice);  // NEW: Add RM price
 
     try {
-      const res = await fetch("https://phydigital-nft-apparel.onrender.com/mint", { method: "POST", body: formData });
+      const res = await fetch("https://phydigital-nft-apparel.onrender.com/mint", { 
+        method: "POST", 
+        body: formData 
+      });
       const data = await res.json();
       setResponse(data);
-      if(data.success) form.reset();
+      if(data.success) {
+        form.reset();
+        setRmPrice("");  // NEW
+        setEthPrice("");  // NEW
+      }
     } catch (err: any) {
       setResponse({ success: false, error: err.message });
     } finally {
@@ -91,14 +117,43 @@ function CreateForm() {
     <div style={{ marginTop: "40px", display: 'flex', justifyContent: 'center' }}>
       <div style={formCardStyle}>
         <h2 style={sectionHeaderStyle}>Register Physical Asset</h2>
-        <p style={{ color: '#666', marginBottom: '30px' }}>Upload item details to generate a blockchain-verified listing.</p>
+        <p style={{ color: '#666', marginBottom: '30px' }}>
+          Upload item details to generate a blockchain-verified listing.
+        </p>
         
         <form onSubmit={handleSubmit} style={formStyle}>
           <input name="name" placeholder="Shirt Name" required style={inputStyle} />
-          <textarea name="description" placeholder="Item Narrative / Description" required style={{...inputStyle, height: '100px'}} />
+          <textarea 
+            name="description" 
+            placeholder="Item Narrative / Description" 
+            required 
+            style={{...inputStyle, height: '100px'}} 
+          />
           <div style={{ display: 'flex', gap: '15px' }}>
-            <input name="supply" type="number" placeholder="Supply" defaultValue="100" style={inputStyle} />
-            <input name="price" type="number" step="0.0001" placeholder="Price (ETH)" style={inputStyle} />
+            <input 
+              name="supply" 
+              type="number" 
+              placeholder="Supply" 
+              defaultValue="100" 
+              style={inputStyle} 
+            />
+            {/* NEW: RM Price Input */}
+            <div style={{ flex: 1 }}>
+              <input 
+                type="number"
+                step="0.01"
+                placeholder="Price (RM)"
+                value={rmPrice}
+                onChange={handleRmPriceChange}
+                style={inputStyle}
+              />
+              {/* NEW: Display calculated ETH (read-only) */}
+              {ethPrice && (
+                <p style={{ fontSize: '0.8rem', color: '#888', margin: '4px 0 0 0' }}>
+                  ≈ {ethPrice} ETH
+                </p>
+              )}
+            </div>
           </div>
           <input placeholder="Color" value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle} />
           <input placeholder="Manufacturing Origin" value={country} onChange={(e) => setCountry(e.target.value)} style={inputStyle} />

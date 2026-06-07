@@ -16,30 +16,30 @@ app.use(express.json());
 // 1. MINT ENDPOINT (Admin creates a new shirt listing)
 app.post("/mint", upload.single("image"), async (req, res) => {
   try {
-    const { name, description, supply, price, attributes } = req.body;
+    const { name, description, supply, price, rm_price, attributes } = req.body;  // Extract rm_price
     const imagePath = req.file?.path;
 
     if (!imagePath) return res.status(400).json({ error: "Image required" });
 
     // 1. Upload to Supabase Storage + Pinata
-    const { imageUrl, metadataUri, metadata } = await uploadToPinata( // ← Extract 'metadata'
+    const { imageUrl, metadataUri, metadata } = await uploadToPinata(
       imagePath, 
       name, 
       description, 
       attributes ? JSON.parse(attributes) : []
     );
 
-    // 2. Lazy mint to contract
-    // ← Pass 'metadata' instead of 'metadataUri'
+    // 2. Lazy mint to contract (using ETH price)
     const { lazyMintHash } = await prepareNFTForStore(metadata, price, parseInt(supply));
 
-    // 3. Save listing to Supabase with BOTH image URL and metadata URI
+    // 3. Save listing to Supabase with both ETH and RM prices
     await supabase.from('store_listings').insert([{
       name, 
       description, 
-      image_url: imageUrl,  // ← NEW: Fast Supabase image URL
-      metadata_uri: metadataUri,  // ← Still store IPFS metadata for blockchain
-      price, 
+      image_url: imageUrl,
+      metadata_uri: metadataUri,
+      price,  // ETH price for blockchain
+      rm_price: parseFloat(rm_price),  // NEW: Store RM price
       supply: parseInt(supply), 
       transaction_hash: lazyMintHash
     }]);
