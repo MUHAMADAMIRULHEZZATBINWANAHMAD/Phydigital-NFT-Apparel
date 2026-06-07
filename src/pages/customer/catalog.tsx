@@ -44,16 +44,11 @@ export default function Catalog() {
       .catch((err) => console.error("Catalog asset fetch error:", err))
       .finally(() => setLoading(false));
 
-    // 2. Fetch live ETH -> MYR rate
-    fetch("https://phydigital-nft-apparel.onrender.com/eth-price")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setConversionRate(data.myrPrice);
-      })
-      .catch((err) => console.error("Conversion rate error:", err));
-  }, []);
+    // 2. Set ETH -> MYR conversion rate (manual update daily)
+    setConversionRate(6447.92); // 1 ETH = RM 6447.92
+  }, []); // ← CLOSE useEffect HERE with empty dependency array
 
-  // 1. Opens the confirmation modal
+  // 1. Opens the confirmation modal (OUTSIDE useEffect)
   const openCheckout = (item: any) => {
     if (!account) { alert("Please connect your wallet first"); return; }
     setCheckoutItem(item);
