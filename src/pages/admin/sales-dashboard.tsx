@@ -209,17 +209,41 @@ function ShippingView() {
             
             <div style={{ padding: '20px', backgroundColor: '#fff', display: 'inline-block', borderRadius: '16px', margin: '0 0 25px 0', border: '1px solid #333' }}>
               <QRCodeSVG 
-                id={`qr-${viewQr}`}
+                id="physical-qr-code" 
                 value={`${window.location.origin}/verify/${viewQr}`} 
                 size={220}
                 bgColor="#ffffff"
                 fgColor="#000000"
                 level="H" 
+                includeMargin={true} // Add margin so the download image has breathing room
               />
             </div>
             
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                <button onClick={() => setViewQr(null)} style={modalCancelBtn}>Close</button>
+               
+               <button 
+                 onClick={() => {
+                   const svg = document.getElementById("physical-qr-code");
+                   if (!svg) return;
+                   const svgData = new XMLSerializer().serializeToString(svg);
+                   const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+                   const url = URL.createObjectURL(blob);
+                   const link = document.createElement("a");
+                   link.href = url;
+                   link.download = `PhygitalTag-${viewQr.substring(0, 6)}.svg`;
+                   document.body.appendChild(link);
+                   link.click();
+                   document.body.removeChild(link);
+                 }} 
+                 style={{
+                   ...modalConfirmBtn,
+                   backgroundColor: '#00d084',
+                   color: '#000'
+                 }}
+               >
+                 ↓ Download Tag (.SVG)
+               </button>
             </div>
           </div>
         </div>

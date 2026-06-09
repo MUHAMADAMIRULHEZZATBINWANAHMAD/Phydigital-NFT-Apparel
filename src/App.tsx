@@ -4,6 +4,7 @@ import Catalog from "./pages/customer/catalog";
 import OrderHistory from "./pages/customer/order-history"; 
 import SalesDashboard from "./pages/admin/sales-dashboard";
 import Docs from "./pages/docs";
+import Verify from "./pages/customer/verify";
 
 // --- IMPORT YOUR MODULAR UI-VERSE BUTTON COMPONENT ---
 import Button from "./assets/components/button"; 
@@ -148,6 +149,7 @@ function App() {
         <Route path="/customer/order-history" element={<OrderHistory />} />
         <Route path="/admin/dashboard" element={<SalesDashboard />} />
         <Route path="/docs" element={<Docs />} />
+        <Route path="/verify/:txHash" element={<Verify />} />
       </Routes>
     </BrowserRouter>
   );
