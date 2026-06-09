@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
 import MyConnectButton from "../../assets/components/connectbutton";
 import { useActiveAccount } from "thirdweb/react";
 
@@ -106,12 +105,6 @@ export default function OrderHistory() {
                     onClick={() => setSelectedTx(order.transaction_hash)}
                     title="Click for full breakdown details"
                   >
-                    <QRCodeSVG 
-                      value={`https://sepolia.etherscan.io/tx/${order.transaction_hash}`} 
-                      size={60} 
-                      bgColor="transparent" 
-                      fgColor="#fff" 
-                    />
                   </div>
                   <div>
                     <span style={receiptLabelStyle}>Cryptographic Receipt</span>

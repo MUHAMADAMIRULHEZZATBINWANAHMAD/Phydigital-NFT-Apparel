@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react"; // NEW IMPORT
 
 // ===================================================================
 // 1. SHIPPING MANAGEMENT VIEW (WITH CONFIRMATION & DISABLE LOGIC)
@@ -7,6 +8,9 @@ import { Link, useNavigate } from "react-router-dom";
 function ShippingView() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // NEW: State to track which QR code logic we are looking at
+  const [viewQr, setViewQr] = useState<string | null>(null);
 
   // Unified state to track both Complete and Cancel actions
   const [pendingAction, setPendingAction] = useState<{ id: number, status: string } | null>(null);
@@ -83,16 +87,29 @@ function ShippingView() {
                      {order.wallet_address}
                    </p>
                 </div>
-                <div>
-                  <span style={labelStyle}>Transaction Link</span>
-                  <a 
-                    href={`https://sepolia.etherscan.io/tx/${order.transaction_hash}`} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    style={{ color: '#00a6ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600', display: 'inline-block', marginTop: '3px' }}
-                  >
-                    View Etherscan ↗
-                  </a>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                  <div>
+                    <span style={labelStyle}>Transaction Link</span>
+                    <a 
+                      href={`https://sepolia.etherscan.io/tx/${order.transaction_hash}`} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      style={{ color: '#00a6ff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600', display: 'inline-block', marginTop: '3px' }}
+                    >
+                      View Etherscan ↗
+                    </a>
+                  </div>
+                  
+                  {/* NEW BUTTON TO OPEN QR */}
+                  <div style={{ borderLeft: '1px solid #333', paddingLeft: '15px' }}>
+                    <span style={labelStyle}>Physical Label</span>
+                    <button 
+                      onClick={() => setViewQr(order.transaction_hash)}
+                      style={{ background: 'none', border: 'none', color: '#f8df00', textDecoration: 'underline', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', padding: 0, marginTop: '3px' }}
+                    >
+                      View QR Code ⊞
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -174,10 +191,40 @@ function ShippingView() {
               >
                 CONFIRM 
               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+      {/* --- NEW: QR CODE VIEWER MODAL FOR MANUFACTURING --- */}
+      {viewQr && (
+        <div style={modalOverlayStyle} onClick={() => setViewQr(null)}>
+          <div style={{...modalContentStyle, textAlign: 'center'}} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 5px 0', color: '#f8df00', fontSize: '1.4rem', fontWeight: '800' }}>
+              Authentication Label
+            </h3>
+            <p style={{ color: '#aaa', fontSize: '0.85rem', marginBottom: '20px' }}>
+              Send this QR code to the manufacturer for physical printing.
+            </p>
+            
+            <div style={{ padding: '20px', backgroundColor: '#fff', display: 'inline-block', borderRadius: '16px', margin: '0 0 25px 0', border: '1px solid #333' }}>
+              <QRCodeSVG 
+                id={`qr-${viewQr}`}
+                value={`${window.location.origin}/verify/${viewQr}`} 
+                size={220}
+                bgColor="#ffffff"
+                fgColor="#000000"
+                level="H" 
+              />
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+               <button onClick={() => setViewQr(null)} style={modalCancelBtn}>Close</button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
 import MyConnectButton from "../../assets/components/connectbutton";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { claimTo } from "thirdweb/extensions/erc721";
@@ -201,12 +200,6 @@ export default function Catalog() {
                     onClick={() => setSelectedTx(item.transaction_hash)}
                     title="Inspect Provenance Details"
                   >
-                    <QRCodeSVG 
-                      value={`https://sepolia.etherscan.io/tx/${item.transaction_hash}`} 
-                      size={50} 
-                      bgColor="transparent" 
-                      fgColor="#fff" 
-                    />
                   </div>
                   <div>
                     <span style={provenanceLabelStyle}>ASSET PROVENANCE</span>
@@ -239,12 +232,6 @@ export default function Catalog() {
             
             <div style={modalQrContainerStyle}>
               <div style={modalQrWrapperStyle}>
-                <QRCodeSVG 
-                  value={`https://sepolia.etherscan.io/tx/${selectedTx}`} 
-                  size={180}
-                  bgColor="transparent" 
-                  fgColor="#fff" 
-                />
               </div>
               
               <a 

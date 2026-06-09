@@ -178,5 +178,26 @@ app.get("/eth-price", async (req, res) => {
   }
 });
 
+// 8. VERIFICATION ENDPOINT (For Dynamic Physical QR Scans)
+app.get("/verify/:txHash", async (req, res) => {
+  try {
+    const txHash = req.params.txHash;
+    
+    const { data, error } = await supabase
+      .from('shipping_orders')
+      .select('*')
+      .eq('transaction_hash', txHash)
+      .single(); // Use single() because txHash is unique per order
+
+    if (error) {
+      return res.status(404).json({ success: false, error: "Authentication record not found." });
+    }
+
+    res.json({ success: true, record: data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
