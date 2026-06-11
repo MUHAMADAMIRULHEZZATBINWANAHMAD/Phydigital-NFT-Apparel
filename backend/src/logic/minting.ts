@@ -99,50 +99,75 @@ export async function prepareNFTForStore(
   price: string,
   supply: number,
 ) {
-  console.log(`Lazy minting 1 ERC1155 token for ${metadata.name}...`);
+  try {
+    console.log("[ERC1155] prepareNFTForStore start");
+    console.log("[ERC1155] contract address:", process.env.THIRDWEB_SMART_CONTRACT_ADDRESS);
+    console.log("[ERC1155] metadata name:", metadata?.name);
+    console.log("[ERC1155] supply:", supply);
+    console.log("[ERC1155] price:", price);
 
-  // This is the token ID that the next lazyMint call will create.
-  const tokenId = await nextTokenIdToMint({ contract });
+    const tokenId = await nextTokenIdToMint({ contract });
+    console.log("[ERC1155] nextTokenIdToMint =>", tokenId.toString());
 
-  // Create exactly one token ID for this product
-  const lazyMintTx = lazyMint({
-    contract,
-    nfts: [metadata],
-  });
+    const lazyMintTx = lazyMint({
+      contract,
+      nfts: [metadata],
+    });
 
-  const lazyMintReceipt = await sendAndConfirmTransaction({
-    transaction: lazyMintTx,
-    account: serverWallet,
-  });
+    console.log("[ERC1155] lazyMint tx prepared");
 
-  console.log("✅ NFT registered to contract!", lazyMintReceipt.transactionHash);
+    const lazyMintReceipt = await sendAndConfirmTransaction({
+      transaction: lazyMintTx,
+      account: serverWallet,
+    });
 
-  // Claim supply for this token ID
-  const startTime = new Date();
-  startTime.setMinutes(startTime.getMinutes() - 5);
+    console.log("[ERC1155] lazyMint success txHash =>", lazyMintReceipt.transactionHash);
 
-  const conditionTx = setClaimConditions({
-    contract,
-    tokenId,
-    phases: [
-      {
-        maxClaimableSupply: BigInt(supply),
-        price,
-        currencyAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-        startTime,
-      },
-    ],
-  });
+    const startTime = new Date();
+    startTime.setMinutes(startTime.getMinutes() - 5);
 
-  const conditionReceipt = await sendAndConfirmTransaction({
-    transaction: conditionTx,
-    account: serverWallet,
-  });
+    console.log("[ERC1155] setClaimConditions input =>", {
+      tokenId: tokenId.toString(),
+      maxClaimableSupply: supply,
+      price,
+      startTime: startTime.toISOString(),
+    });
 
-  console.log("✅ Claim conditions updated!", conditionReceipt.transactionHash);
+    const conditionTx = setClaimConditions({
+      contract,
+      tokenId,
+      phases: [
+        {
+          maxClaimableSupply: BigInt(supply),
+          price,
+          currencyAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+          startTime,
+        },
+      ],
+    });
 
-  return {
-    lazyMintHash: lazyMintReceipt.transactionHash,
-    tokenId: tokenId.toString(),
-  };
+    console.log("[ERC1155] setClaimConditions tx prepared");
+
+    const conditionReceipt = await sendAndConfirmTransaction({
+      transaction: conditionTx,
+      account: serverWallet,
+    });
+
+    console.log(
+      "[ERC1155] setClaimConditions success txHash =>",
+      conditionReceipt.transactionHash,
+    );
+
+    return {
+      lazyMintHash: lazyMintReceipt.transactionHash,
+      tokenId: tokenId.toString(),
+    };
+  } catch (err: any) {
+    console.error("[ERC1155] prepareNFTForStore failed");
+    console.error("[ERC1155] message:", err?.message);
+    console.error("[ERC1155] code:", err?.code);
+    console.error("[ERC1155] data:", err?.data);
+    console.error("[ERC1155] stack:", err?.stack);
+    throw err;
+  }
 }

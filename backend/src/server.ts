@@ -16,51 +16,105 @@ app.use(express.json());
 // 1. MINT ENDPOINT (Admin creates a new shirt listing)
 app.post("/mint", upload.single("image"), async (req, res) => {
   try {
-    const { name, description, supply, price, rm_price, attributes } = req.body;  // Extract rm_price
+    console.log("[MINT] request received");
+    console.log("[MINT] body:", {
+      name: req.body.name,
+      description: req.body.description,
+      supply: req.body.supply,
+      price: req.body.price,
+      rm_price: req.body.rm_price,
+      attributesRaw: req.body.attributes,
+    });
+    console.log("[MINT] file:", req.file?.path);
+
+    const { name, description, supply, price, rm_price, attributes } = req.body;
     const imagePath = req.file?.path;
 
-    // ADD THESE SAFETY CHECKS:
-    if (!imagePath) return res.status(400).json({ error: "Image required" });
-    if (!price || parseFloat(price) <= 0) return res.status(400).json({ error: "Valid ETH price required" });
-    if (!supply || parseInt(supply) <= 0) return res.status(400).json({ error: "Valid supply count required" });
+    if (!imagePath) {
+      console.error("[MINT] missing image");
+      return res.status(400).json({ error: "Image required" });
+    }
+    if (!price || parseFloat(price) <= 0) {
+      console.error("[MINT] invalid price:", price);
+      return res.status(400).json({ error: "Valid ETH price required" });
+    }
+    if (!supply || parseInt(supply) <= 0) {
+      console.error("[MINT] invalid supply:", supply);
+      return res.status(400).json({ error: "Valid supply count required" });
+    }
 
-    // 1. Upload to Supabase Storage + Pinata
+    const parsedAttributes = attributes ? JSON.parse(attributes) : [];
+    console.log("[MINT] parsed attributes:", parsedAttributes);
+
     const { imageUrl, metadataUri, metadata } = await uploadToPinata(
-      imagePath, 
-      name, 
-      description, 
-      attributes ? JSON.parse(attributes) : []
+      imagePath,
+      name,
+      description,
+      parsedAttributes,
     );
 
-    // 2. Lazy mint to contract (using ETH price)
+    console.log("[MINT] uploadToPinata success:", {
+      imageUrl,
+      metadataUri,
+      metadataName: metadata?.name,
+    });
+
     const { lazyMintHash, tokenId } = await prepareNFTForStore(
       metadata,
       price,
-      parseInt(supply)
+      parseInt(supply),
     );
 
-    // 3. Save listing to Supabase with both ETH and RM prices
-    const { error: insertError } = await supabase.from('store_listings').insert([{
-      name, 
-      description, 
+    console.log("[MINT] prepareNFTForStore success:", {
+      lazyMintHash,
+      tokenId,
+    });
+
+    const listingPayload = {
+      name,
+      description,
       image_url: imageUrl,
       metadata_uri: metadataUri,
-      price,  // ETH price for blockchain
-      rm_price: rm_price ? parseFloat(rm_price) : 0,  // FIXED: Handle empty values to avoid NaN
-      supply: parseInt(supply), 
+      price,
+      rm_price: rm_price ? parseFloat(rm_price) : 0,
+      supply: parseInt(supply),
       transaction_hash: lazyMintHash,
       token_id: tokenId,
-    }]);
+    };
 
-    // NEW: Check if database insert failed
+    console.log("[MINT] inserting listing:", listingPayload);
+
+    const { error: insertError } = await supabase
+      .from("store_listings")
+      .insert([listingPayload]);
+
     if (insertError) {
-      console.error("Supabase Insert Error:", insertError);
+      console.error("[MINT] Supabase insert failed:", insertError);
       throw new Error(`Database error: ${insertError.message}`);
     }
 
-    res.json({ success: true, lazyMintHash, metadataUri, imageUrl, tokenId });
+    console.log("[MINT] done successfully");
+
+    res.json({
+      success: true,
+      lazyMintHash,
+      metadataUri,
+      imageUrl,
+      tokenId,
+    });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error("[MINT] route failed");
+    console.error("[MINT] message:", err?.message);
+    console.error("[MINT] code:", err?.code);
+    console.error("[MINT] data:", err?.data);
+    console.error("[MINT] stack:", err?.stack);
+
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Unknown mint error",
+      code: err?.code,
+      data: err?.data,
+    });
   }
 });
 

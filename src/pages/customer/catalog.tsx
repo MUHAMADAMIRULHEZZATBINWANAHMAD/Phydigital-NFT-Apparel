@@ -64,6 +64,12 @@ export default function Catalog() {
   const confirmPurchase = async () => {
     if (!account || !checkoutItem) return;
 
+    console.log("[CATALOG] confirming purchase");
+    console.log("[CATALOG] checkoutItem:", checkoutItem);
+    console.log("[CATALOG] token_id:", checkoutItem?.token_id);
+    console.log("[CATALOG] quantity:", checkoutQuantity);
+    console.log("[CATALOG] wallet:", account?.address);
+
     try {
       setBuyingItemId(checkoutItem.id);
       setTxHash(null);
@@ -73,6 +79,8 @@ export default function Catalog() {
         address: import.meta.env.VITE_CONTRACT_ADDRESS || "0x6Fc89ed7A39c1C77E4f3AE669Dbc99B4Dc72562C",
         chain: sepolia,
       });
+
+      console.log("[CATALOG] preparing claimTo transaction");
       
       const tx = claimTo({
         contract,
@@ -80,6 +88,8 @@ export default function Catalog() {
         tokenId: BigInt(checkoutItem.token_id),
         quantity: BigInt(checkoutQuantity), 
       });
+
+      console.log("[CATALOG] claimTo tx prepared:", tx);
 
       sendTransaction(tx as any, {
         onSuccess: (receipt: any) => {
@@ -91,7 +101,10 @@ export default function Catalog() {
           setCheckoutItem(null); // Close checkout modal
         },
         onError: (error: any) => {
-          console.error("❌ Claim failed:", error);
+          console.error("[CATALOG] claim failed:", error);
+          console.error("[CATALOG] message:", error?.message);
+          console.error("[CATALOG] code:", error?.code);
+          console.error("[CATALOG] data:", error?.data);
           alert("Purchase failed.");
           setBuyingItemId(null);
         },
