@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MyConnectButton from "../../assets/components/connectbutton";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
-import { claimTo } from "thirdweb/extensions/erc721";
+import { claimTo } from "thirdweb/extensions/erc1155";
 import { getContract, createThirdwebClient } from "thirdweb";
 import { sepolia } from "thirdweb/chains";
 
@@ -44,12 +44,18 @@ export default function Catalog() {
       .finally(() => setLoading(false));
 
     // 2. Set ETH -> MYR conversion rate (manual update daily)
-    setConversionRate(6447.92); // 1 ETH = RM 6447.92
+    setConversionRate(6661.32); // 1 ETH = RM 6661.32
   }, []); // ← CLOSE useEffect HERE with empty dependency array
 
   // 1. Opens the confirmation modal (OUTSIDE useEffect)
   const openCheckout = (item: any) => {
     if (!account) { alert("Please connect your wallet first"); return; }
+
+    if (item.token_id === null || item.token_id === undefined) {
+      alert("This item is not available for purchase.");
+      return;
+    }
+
     setCheckoutItem(item);
     setCheckoutQuantity(1);
   };
@@ -64,14 +70,15 @@ export default function Catalog() {
 
       const contract = getContract({
         client,
-        address: import.meta.env.VITE_CONTRACT_ADDRESS || "0xe2E14c2351f3C19D1aaE477525c4D38B7FD325b0",
+        address: import.meta.env.VITE_CONTRACT_ADDRESS || "0x6Fc89ed7A39c1C77E4f3AE669Dbc99B4Dc72562C",
         chain: sepolia,
       });
       
       const tx = claimTo({
         contract,
         to: account.address,
-        quantity: BigInt(checkoutQuantity), // 👇 NEW: Dynamic quantity
+        tokenId: BigInt(checkoutItem.token_id),
+        quantity: BigInt(checkoutQuantity), 
       });
 
       sendTransaction(tx as any, {

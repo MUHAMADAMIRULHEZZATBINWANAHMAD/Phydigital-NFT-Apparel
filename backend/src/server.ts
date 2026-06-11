@@ -33,7 +33,11 @@ app.post("/mint", upload.single("image"), async (req, res) => {
     );
 
     // 2. Lazy mint to contract (using ETH price)
-    const { lazyMintHash } = await prepareNFTForStore(metadata, price, parseInt(supply));
+    const { lazyMintHash, tokenId } = await prepareNFTForStore(
+      metadata,
+      price,
+      parseInt(supply)
+    );
 
     // 3. Save listing to Supabase with both ETH and RM prices
     const { error: insertError } = await supabase.from('store_listings').insert([{
@@ -44,7 +48,8 @@ app.post("/mint", upload.single("image"), async (req, res) => {
       price,  // ETH price for blockchain
       rm_price: rm_price ? parseFloat(rm_price) : 0,  // FIXED: Handle empty values to avoid NaN
       supply: parseInt(supply), 
-      transaction_hash: lazyMintHash
+      transaction_hash: lazyMintHash,
+      token_id: tokenId,
     }]);
 
     // NEW: Check if database insert failed
@@ -53,7 +58,7 @@ app.post("/mint", upload.single("image"), async (req, res) => {
       throw new Error(`Database error: ${insertError.message}`);
     }
 
-    res.json({ success: true, lazyMintHash, metadataUri, imageUrl });
+    res.json({ success: true, lazyMintHash, metadataUri, imageUrl, tokenId });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

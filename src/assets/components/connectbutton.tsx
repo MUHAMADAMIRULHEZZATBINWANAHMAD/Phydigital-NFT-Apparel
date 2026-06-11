@@ -22,7 +22,7 @@ export default function MyConnectButton() {
       wallets={wallets} 
       appMetadata={{
         name: "Sunday Clothing",
-        url: "http://localhost:5173",
+        url: "https://www.phygital.foo",
       }}
     />
   );
