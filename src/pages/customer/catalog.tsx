@@ -76,7 +76,7 @@ export default function Catalog() {
 
       const contract = getContract({
         client,
-        address: import.meta.env.VITE_CONTRACT_ADDRESS || "0x6Fc89ed7A39c1C77E4f3AE669Dbc99B4Dc72562C",
+        address: import.meta.env.VITE_CONTRACT_ADDRESS || "0xcb08dC3C640D9748B41F7E056f8e6204667FC26e",
         chain: sepolia,
       });
 
